@@ -1,4 +1,4 @@
-name: hestia-project
+name: gallifrey
 channels:
   - conda-forge
   - defaults
@@ -333,4 +333,4 @@ dependencies:
   - zipp=3.12.0=pyhd8ed1ab_0
   - zlib=1.2.13=h166bdaf_4
   - zstd=1.5.2=h3eb15da_6
-prefix: /home/chris/anaconda3/envs/hestia-project
+prefix: /home/chris/anaconda3/envs/gallifrey

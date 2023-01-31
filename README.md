@@ -1,4 +1,4 @@
-Hestia-Project
+gallifrey
 ==============================
 
 Using the Hestia simulation for astrobiology.
