@@ -45,9 +45,14 @@ bettercode:
 	mypy src
 	flake8 src
 
-## Set up python interpreter environment
+## Set up python interpreter environment using conda
 create_environment:
+ifeq (True,$(HAS_CONDA))
+	@echo ">>> Detected conda, creating conda environment."
 	conda create -f environment.yaml
+else
+	@echo ">>> Interpreter environment is setup in conda-friendly .yaml file. Consider using conda for this project."
+endif
 
 #################################################################################
 # PROJECT RULES                                                                 #
