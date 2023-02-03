@@ -46,7 +46,8 @@ def load_snapshot(
     """
     if os.environ.get("USER") == "chris":  # if local system, load the test file
         print("\n      DETECTED LOCAL MACHINE: Test snapshot loaded.\n")
-        path = r"data/raw/snapdir_002/snapshot_002.0.hdf5"
+        path = (r"/home/chris/Documents/Projects/gallifrey/"
+                r"data/raw/snapdir_127/snapshot_127.0.hdf5")
 
     else:
 
