@@ -59,7 +59,9 @@ save_environment:
 	
 ## Update existing environment using yaml
 update_environment:
+	conda deactivate
 	conda env update -f environment.yaml --prune
+	conda activate gallifrey
 
 ## create requirements.txt with pipreqs
 create_requirements:

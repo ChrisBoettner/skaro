@@ -129,7 +129,7 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
             self.resolution = 4096
         # else load Noam's file
         else:
-            file_path = r"/z/nil/codes/HESTIA/FIND_LG/LGs_{self.resolution}_GAL_FOR.txt"
+            file_path = rf"/z/nil/codes/HESTIA/FIND_LG/LGs_{self.resolution}_GAL_FOR.txt"
 
         # read file line by line and preprocess
         halo_information = []
