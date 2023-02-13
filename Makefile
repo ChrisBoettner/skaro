@@ -49,14 +49,17 @@ bettercode:
 	flake8 src
 	@echo "----------------------------------------------------------------------------------------------------"
 
-## Create environment yaml using conda
+## Create conda environment from yaml
 create_environment:
-ifeq (True,$(HAS_CONDA))
-	@echo ">>> Detected conda, creating conda environment."
-	conda create -f environment.yaml
-else
-	@echo ">>> Interpreter environment is setup in conda-friendly .yaml file. Consider using conda for this project."
-endif
+	conda env create -f environment.yaml
+
+## Save environment yaml using conda
+save_environment:
+	conda env export > environment.yaml
+	
+## Update existing environment using yaml
+update_environment:
+	conda env update -f environment.yaml --prune
 
 ## create requirements.txt with pipreqs
 create_requirements:
