@@ -11,6 +11,8 @@ import os
 import yt
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 
+from gallifrey.data.paths import get_load_path
+
 
 def load_snapshot(
     snapshot: int,
@@ -44,10 +46,13 @@ def load_snapshot(
         yt dataset object.
 
     """
+
+    # get path depending on machine
+    path = get_load_path()
+
     if os.environ.get("USER") == "chris":  # if local system, load the test file
         print("\n      DETECTED LOCAL MACHINE: Test snapshot loaded.\n")
-        path = (r"/home/chris/Documents/Projects/gallifrey/"
-                r"data/raw/snapdir_127/snapshot_127.0.hdf5")
+        path = path + r"snapdir_127/snapshot_127.0.hdf5"
 
     else:
 
@@ -57,7 +62,7 @@ def load_snapshot(
         # add leading zeros to snapshot if necessary
         snapshot_string = f"00{snapshot}"[-3:]
 
-        path = rf"/store/clues/HESTIA/RE_SIMS/{resolution}/GAL_FOR/{run}"
+        path = path + rf"/{resolution}/GAL_FOR/{run}"
         match resolution:
             case 8192:
                 path += (

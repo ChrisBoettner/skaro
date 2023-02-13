@@ -41,11 +41,15 @@ isort:
 ## Run isort, black, mypy and flake8
 bettercode:
 	isort .
+	@echo "----------------------------------------------------------------------------------------------------"
 	black src
+	@echo "----------------------------------------------------------------------------------------------------"
 	mypy src
+	@echo "----------------------------------------------------------------------------------------------------"
 	flake8 src
+	@echo "----------------------------------------------------------------------------------------------------"
 
-## Set up python interpreter environment using conda
+## Create environment yaml using conda
 create_environment:
 ifeq (True,$(HAS_CONDA))
 	@echo ">>> Detected conda, creating conda environment."
@@ -53,6 +57,10 @@ ifeq (True,$(HAS_CONDA))
 else
 	@echo ">>> Interpreter environment is setup in conda-friendly .yaml file. Consider using conda for this project."
 endif
+
+## create requirements.txt with pipreqs
+create_requirements:
+	pipreqs --savepath requirements.txt src
 
 #################################################################################
 # PROJECT RULES                                                                 #

@@ -6,6 +6,7 @@ Created on Tue Jan 31 14:34:02 2023
 @author: chris
 """
 import yt
+
 yt.toggle_interactivity()
 
 from src.gallifrey.data.load import load_snapshot
