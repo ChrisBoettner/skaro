@@ -151,9 +151,9 @@ class Halo(HaloContainer):
 
     def __init__(
         self,
-        resolution: int,
-        sim_id: str,
         halo_id: str,
+        resolution: int,
+        sim_id: str="09_18",
         snapshot: int = 127,
         path: Optional[str] = None,
     ) -> None:
@@ -162,18 +162,18 @@ class Halo(HaloContainer):
 
         Parameters
         ----------
+        halo_id : str
+            ID or name of halo in question.
         resolution : int
             Resolution of simulation used.
         sim_id : str
             ID of simulation run.
-        halo_id : str
-            ID or name of halo in question.
         snapshot : TYPE, optional
             Index of snapshot. The default is 127.
         """
+        self.halo_id = halo_id
         self.resolution = resolution
         self.sim_id = sim_id
-        self.halo_id = halo_id
         self.snapshot = f"00{snapshot}"[-3:]
 
         self.set_path(path)

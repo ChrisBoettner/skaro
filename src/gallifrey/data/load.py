@@ -16,7 +16,7 @@ from gallifrey.data.paths import Path
 
 def load_snapshot(
     snapshot: int,
-    resolution: int = 8192,
+    resolution: int,
     sim_id: str = "09_18",
 ) -> ArepoHDF5Dataset:
     """
@@ -28,7 +28,6 @@ def load_snapshot(
         Snapshot number, should be between 0 and 127.
     resolution : int, optional
         Particle resolution of the simulation, should be 2048, 4096 or 8192.
-        The default is 8192.
     sim_id : str, optional
         ID of the concrete simulation run. The default is "09_18".
 

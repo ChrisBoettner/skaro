@@ -11,13 +11,16 @@ yt.toggle_interactivity()
 from gallifrey.data.load import load_snapshot
 from gallifrey.halo import MainHalo
 
-ds = load_snapshot(1)
-mw = MainHalo(4096, "09_18", "MW")
+ds = load_snapshot(127, 4096)
+mw = MainHalo("MW", 4096, "09_18")
 
 
-p = yt.SlicePlot(ds, 'y', fields=('gas','density'), 
+p = yt.ProjectionPlot(ds, normal = mw.sphere(ds).quantities.angular_momentum_vector().value,
+                 fields=('gas','density'), data_source=mw.sphere(ds),
                       center = mw.centre(ds), 
                       width =(5000, 'kpc') )
+p.set_zlim(("gas", "density"), zmin=(1e-8, "g/cm**2"), zmax=(1e-2, "g/cm**2"))
+p.save()
 
 
 
