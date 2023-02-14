@@ -8,14 +8,121 @@ Created on Mon Feb 13 20:55:44 2023
 import os
 
 
-def get_load_path() -> str:
+class Path:
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def raw_data(
+        relative_path: str,
+        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/raw",
+        remote_abspath: str = r"/store/clues/HESTIA/RE_SIMS",
+    ) -> str:
+        """
+        Path to raw data.
+
+        Parameters
+        ----------
+        relative_path : str
+            Relative file path.
+        local_abspath : str, optional
+            Local absolute path.
+            The default is r"/home/chris/Documents/Projects/gallifrey/data/raw".
+        remote_abspath : str, optional
+            Remote ansolute path.
+            The default is r"/store/clues/HESTIA/RE_SIMS".
+
+        Returns
+        -------
+        str
+            System-dependent absolute path to file.
+
+        """
+        abspath = Path.choose_path(local_abspath, remote_abspath)
+        return os.path.join(abspath, relative_path)
+
+    @staticmethod
+    def processed_data(
+        relative_path: str,
+        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/processed",
+        remote_abspath: str = r"/z/boettner/gallifrey/data/processed",
+    ) -> str:
+        """
+        Path to processed data.
+
+        Parameters
+        ----------
+        relative_path : str
+            Relative file path.
+        local_abspath : str, optional
+            Local absolute path.
+            The default is r"/home/chris/Documents/Projects/gallifrey/data/processed".
+        remote_abspath : str, optional
+            Remote ansolute path.
+            The default is r"/z/boettner/gallifrey/data/processed".
+
+        Returns
+        -------
+        str
+            System-dependent absolute path to file.
+
+        """
+        abspath = Path.choose_path(local_abspath, remote_abspath)
+        return os.path.join(abspath, relative_path)
+
+    @staticmethod
+    def figures(
+        relative_path: str,
+        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/figures",
+        remote_abspath: str = r"/z/boettner/gallifrey/figures",
+    ) -> str:
+        """
+        Path to figures.
+
+        Parameters
+        ----------
+        relative_path : str
+            Relative file path.
+        local_abspath : str, optional
+            Local absolute path.
+            The default is r"/home/chris/Documents/Projects/gallifrey/figures".
+        remote_abspath : str, optional
+            Remote ansolute path.
+            The default is r"/z/boettner/gallifrey/figures".
+
+        Returns
+        -------
+        str
+            System-dependent absolute path to file.
+
+        """
+        abspath = Path.choose_path(local_abspath, remote_abspath)
+        return os.path.join(abspath, relative_path)
+
+    @staticmethod
+    def choose_path(local_abspath: str, remote_abspath: str) -> str:
+        if os.environ.get("USER") == "chris":  # check for local system
+            abspath = local_abspath
+        else:
+            abspath = remote_abspath
+        return abspath
+
+
+def load_raw_data(relative_path: str) -> str:
     """
-    Load path on local or remote system.
+    Get (absolute) load path based on system (local/remote) and append relative
+    path to file.
+
+    Parameters
+    ----------
+    relative_path : str
+        Relative path to file. Must be in gallifrey/data/raw folder if local or
+        HESTIA/RE_SIMS/ if remote.
 
     Returns
     -------
     str
-        Load path.
+        Absolute path to file.
 
     """
     if os.environ.get("USER") == "chris":  # check for local system
@@ -23,39 +130,6 @@ def get_load_path() -> str:
     else:
         path = r"/store/clues/HESTIA/RE_SIMS/"
 
-    return path
+    path += relative_path
 
-
-def get_save_path(mode: str) -> str:
-    """
-    Save path on local or remote system.
-
-    Parameters
-    ----------
-    mode : str
-        If 'data' save to 'data/processed'.
-        If 'figures' save to 'figures'.
-
-    Raises
-    ------
-    ValueError
-        Raised in mode is not 'data' or 'figures'.
-
-    Returns
-    -------
-    str
-        Save path.
-
-    """
-    if os.environ.get("USER") == "chris":  # check for local system
-        path = r"/home/chris/Documents/Projects/gallifrey/"
-    else:
-        path = r"/z/boettner/gallifrey/"
-
-    if mode == "data":
-        path += "data/processed/"
-    elif mode == "figures":
-        path += "figures/"
-    else:
-        raise ValueError("Mode not known. Must be 'data' or 'figures'.")
     return path

@@ -11,7 +11,7 @@ import os
 import yt
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 
-from gallifrey.data.paths import get_load_path
+from gallifrey.data.paths import Path
 
 
 def load_snapshot(
@@ -46,23 +46,18 @@ def load_snapshot(
         yt dataset object.
 
     """
-
-    # get path depending on machine
-    path = get_load_path()
-
     if os.environ.get("USER") == "chris":  # if local system, load the test file
         print("\n      DETECTED LOCAL MACHINE: Test snapshot loaded.\n")
-        path = path + r"snapdir_127/snapshot_127.0.hdf5"
+        path = Path().raw_data(r"snapdir_127/snapshot_127.0.hdf5")
 
     else:
-
         # check if snapshot is available
         if not ((snapshot >= 0) and (snapshot <= 127)):
             raise ValueError("Snapshot should be between 0 and 127.")
         # add leading zeros to snapshot if necessary
         snapshot_string = f"00{snapshot}"[-3:]
 
-        path = path + rf"/{resolution}/GAL_FOR/{run}"
+        path = Path().raw_data(rf"/{resolution}/GAL_FOR/{run}")
         match resolution:
             case 8192:
                 path += (

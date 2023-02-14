@@ -7,13 +7,13 @@ Created on Mon Feb 13 20:23:23 2023
 """
 
 import os
+import pathlib
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any
 
 from ruamel.yaml import YAML, CommentedMap
 
-from gallifrey.data.paths import get_load_path, get_save_path
+from gallifrey.data.paths import Path
 
 
 class HaloPreprocessingAbstract(ABC):
@@ -118,18 +118,18 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
     def load_source(self) -> list[list]:
         """Load Noam's main halo information files."""
 
-        # if local system, load the test file
-        path = get_load_path()
+        # if file dependenet on system
         if os.environ.get("USER") == "chris":
             print(
                 "\n      DETECTED LOCAL MACHINE: Test file loaded."
                 "Resolution set to 4096. \n"
             )
-            file_path = path + r"LGs_4096_GAL_FOR.txt"
             self.resolution = 4096
-        # else load Noam's file
-        else:
-            file_path = rf"/z/nil/codes/HESTIA/FIND_LG/LGs_{self.resolution}_GAL_FOR.txt"
+
+        file_path = Path().raw_data(
+            rf"LGs_{self.resolution}_GAL_FOR.txt",
+            remote_abspath=r"/z/nil/codes/HESTIA/FIND_LG",
+        )
 
         # read file line by line and preprocess
         halo_information = []
@@ -206,14 +206,13 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
             Dictonary of halo information per run, created by fill_yaml.
 
         """
-        save_path = get_save_path("data")
 
         # iterate over all runs
         for sim_id, yaml_object in processed_halo_information.items():
-            path = save_path + f"{self.resolution}/{sim_id}/"
+            path = Path().processed_data(f"{self.resolution}/{sim_id}/")
 
             # create dir if it does not exist
-            Path(path).mkdir(parents=True, exist_ok=True)
+            pathlib.Path(path).mkdir(parents=True, exist_ok=True)
 
             with open(
                 path + f"snapshot_{self.snapshot}_main_halos.yaml", "w"
