@@ -106,30 +106,3 @@ class Path:
         else:
             abspath = remote_abspath
         return abspath
-
-
-def load_raw_data(relative_path: str) -> str:
-    """
-    Get (absolute) load path based on system (local/remote) and append relative
-    path to file.
-
-    Parameters
-    ----------
-    relative_path : str
-        Relative path to file. Must be in gallifrey/data/raw folder if local or
-        HESTIA/RE_SIMS/ if remote.
-
-    Returns
-    -------
-    str
-        Absolute path to file.
-
-    """
-    if os.environ.get("USER") == "chris":  # check for local system
-        path = r"/home/chris/Documents/Projects/gallifrey/data/raw/"
-    else:
-        path = r"/store/clues/HESTIA/RE_SIMS/"
-
-    path += relative_path
-
-    return path

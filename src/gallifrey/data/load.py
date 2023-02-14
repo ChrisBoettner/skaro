@@ -17,7 +17,7 @@ from gallifrey.data.paths import Path
 def load_snapshot(
     snapshot: int,
     resolution: int = 8192,
-    run: str = "09_18",
+    sim_id: str = "09_18",
 ) -> ArepoHDF5Dataset:
     """
 
@@ -29,8 +29,8 @@ def load_snapshot(
     resolution : int, optional
         Particle resolution of the simulation, should be 2048, 4096 or 8192.
         The default is 8192.
-    run : str, optional
-        Name of the concrete simulation run. The default is "09_18".
+    sim_id : str, optional
+        ID of the concrete simulation run. The default is "09_18".
 
     Raises
     ------
@@ -57,7 +57,7 @@ def load_snapshot(
         # add leading zeros to snapshot if necessary
         snapshot_string = f"00{snapshot}"[-3:]
 
-        path = Path().raw_data(rf"/{resolution}/GAL_FOR/{run}")
+        path = Path().raw_data(rf"{resolution}/GAL_FOR/{sim_id}")
         match resolution:
             case 8192:
                 path += (
