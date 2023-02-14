@@ -30,21 +30,26 @@ class HaloPreprocessingAbstract(ABC):
         Parameters
         ----------
         resolution : int
-            Resolution of Simualtion used.
+            Resolution of simulation used.
             Likely in [512, 1024, 2048, 4096, 8192, 16384].
         snapshot : int, optional
             Index of snapshot. The default is 127.
         """
         self.resolution = resolution
-        self.snapshot = snapshot
+        self.snapshot = f"00{snapshot}"[-3:]  # always 3 digits
 
-    def preprocess(self) -> None:
+    def create(self, overwrite: bool = False) -> None:
         """
         Load, process and save halo information.
+        Parameters
+        ----------
+        overwrite : bool, optional
+            Passed to save_yaml() method. If false, raises an error if the file already
+            exists. The default is False.
         """
         halo_information = self.load_source()
         processed_halo_information = self.fill_yaml(halo_information)
-        self.save_yaml(processed_halo_information)
+        self.save_yaml(processed_halo_information, overwrite=overwrite)
 
     @abstractmethod
     def load_source(self) -> list[list] | list[Any]:
@@ -68,12 +73,13 @@ class HaloPreprocessingAbstract(ABC):
     def save_yaml(
         self,
         processed_halo_information: CommentedMap | dict[str, CommentedMap],
+        overwrite: bool,
     ) -> None:
         """Save halo information to yaml file."""
         pass
 
+    @staticmethod
     def commented_yaml_string(
-        self,
         ID: str,
         X: float,
         Y: float,
@@ -141,7 +147,7 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
                     split_line = line.split()  # split at whitespace
                     split_line = split_line[:-1]  # last entry is useless
                     # re-insert simulation ID in correct format
-                    sim_id = f"{split_line[0]}_{split_line[1]}"
+                    sim_id = f"0{split_line[0]}"[-2:] + f"_{split_line[1]}"
                     split_line = [sim_id] + split_line[2:]
                     halo_information.append(split_line)
         return halo_information
@@ -196,6 +202,7 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
     def save_yaml(
         self,
         processed_halo_information: dict[str, CommentedMap],
+        overwrite: bool = False,
     ) -> None:
         """
         Save halo information as yaml.
@@ -204,17 +211,26 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
         ----------
         processed_halo_information : dict[str, CommentedMap]
             Dictonary of halo information per run, created by fill_yaml.
+        overwrite : bool, optional
+            If false, raises an error if the file already exists. The default is False.
+
+        Raises
+        ------
+        FileExistsError
+            Raised if file already exists and overwrite=False.
 
         """
-
         # iterate over all runs
         for sim_id, yaml_object in processed_halo_information.items():
-            path = Path().processed_data(f"{self.resolution}/{sim_id}/")
+            path = Path().processed_data(f"{self.resolution}/{sim_id}")
 
             # create dir if it does not exist
             pathlib.Path(path).mkdir(parents=True, exist_ok=True)
 
-            with open(
-                path + f"snapshot_{self.snapshot}_main_halos.yaml", "w"
-            ) as savefile:
+            file = os.path.join(path, f"snapshot_{self.snapshot}_main_halos.yaml")
+
+            if os.path.isfile(file) and (not overwrite):
+                raise FileExistsError("File already exists, needs overwrite=True.")
+
+            with open(file, "w") as savefile:
                 YAML().dump(yaml_object, savefile)
