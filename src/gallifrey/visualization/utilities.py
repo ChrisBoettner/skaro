@@ -9,9 +9,9 @@ Created on Wed Feb 15 10:34:21 2023
 from typing import Type
 
 import matplotlib.pyplot as plt
+import pylab as pl
 from matplotlib.backends.backend_qt import FigureManagerQT
 from yt.visualization.plot_window import NormalPlot
-
 
 class FigureManager:
     """Custom Figure Manager to deal with yt plot interactively."""
@@ -43,7 +43,8 @@ class FigureManager:
             # connect manager and figure
             new_manager.canvas.figure = plot.figure
             plot.figure.set_canvas(new_manager.canvas)
-            plot.figure.show()
+            pl.figure(plot.figure)
+            plt.show()
             # append manager to list of managers
             self.managers.append(new_manager)
             # increment counter

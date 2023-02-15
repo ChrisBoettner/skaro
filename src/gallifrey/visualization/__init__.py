@@ -1,11 +1,11 @@
 import os
 
-import matplotlib as mpl
+import matplotlib.pyplot as plt
 import matplotlib.style
+import matplotlib as mpl
 
 # choose default backend
-mpl.use("qtagg")
-mpl.get_backend()
+plt.switch_backend("QtAgg")
 
 # custom plotting settings
 this_dir, _ = os.path.split(__file__)
