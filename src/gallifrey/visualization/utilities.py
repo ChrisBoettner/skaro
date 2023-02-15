@@ -21,6 +21,10 @@ class FigureManager:
         """
         Initilize empty list of managers and counter for figures.
         """
+        # choose default backend
+        print("FigureManager: Setting backend to QtAgg")
+        plt.switch_backend("QtAgg")
+
         self.num = 0
         self.managers: list[FigureManagerQT] = []
 
