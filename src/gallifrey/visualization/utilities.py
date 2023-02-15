@@ -43,6 +43,7 @@ class FigureManager:
             # connect manager and figure
             new_manager.canvas.figure = plot.figure
             plot.figure.set_canvas(new_manager.canvas)
+            plot.figure.show()
             # append manager to list of managers
             self.managers.append(new_manager)
             # increment counter
