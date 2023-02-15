@@ -59,15 +59,17 @@ def load_snapshot(
         path = Path().raw_data(rf"{resolution}/GAL_FOR/{sim_id}")
         match resolution:
             case 8192:
-                path = os.path.join(path,
+                path = os.path.join(
+                    path,
                     rf"output_2x2.5Mpc/snapdir_{snapshot_string}"
-                    rf"/snapshot_{snapshot_string}.0.hdf5"
+                    rf"/snapshot_{snapshot_string}.0.hdf5",
                 )
 
             case 2048 | 4096:
-                path = os.path.join(path,
+                path = os.path.join(
+                    path,
                     rf"output/snapdir_{snapshot_string}"
-                    rf"/snapshot_{snapshot_string}.0.hdf5"
+                    rf"/snapshot_{snapshot_string}.0.hdf5",
                 )
 
             case _:

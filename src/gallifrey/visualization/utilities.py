@@ -13,6 +13,7 @@ import pylab as pl
 from matplotlib.backends.backend_qt import FigureManagerQT
 from yt.visualization.plot_window import NormalPlot
 
+
 class FigureManager:
     """Custom Figure Manager to deal with yt plot interactively."""
 

@@ -1,8 +1,8 @@
 import os
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.style
-import matplotlib as mpl
 
 # choose default backend
 plt.switch_backend("QtAgg")
