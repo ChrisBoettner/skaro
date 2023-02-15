@@ -153,7 +153,7 @@ class Halo(HaloContainer):
         self,
         halo_id: str,
         resolution: int,
-        sim_id: str="09_18",
+        sim_id: str = "09_18",
         snapshot: int = 127,
         path: Optional[str] = None,
     ) -> None:

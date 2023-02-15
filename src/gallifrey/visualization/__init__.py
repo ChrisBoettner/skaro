@@ -1,3 +1,11 @@
-import yt
+import os
 
-yt.toggle_interactivity()
+import matplotlib as mpl
+import matplotlib.style
+
+# choose default backend
+mpl.use("qtagg")
+
+# custom plotting settings
+this_dir, _ = os.path.split(__file__)
+mpl.style.use(os.path.join(this_dir, "settings.rc"))

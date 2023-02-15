@@ -101,6 +101,22 @@ class Path:
 
     @staticmethod
     def choose_path(local_abspath: str, remote_abspath: str) -> str:
+        '''
+        Choose path depending on system, determined by os environment name.
+
+        Parameters
+        ----------
+        local_abspath : str
+            Local absolute path.
+        remote_abspath : str
+            Remote ansolute path.
+
+        Returns
+        -------
+        str
+            Correct absolute path for system.
+
+        '''
         if os.environ.get("USER") == "chris":  # check for local system
             abspath = local_abspath
         else:
