@@ -6,18 +6,19 @@ Created on Mon Feb 13 20:55:44 2023
 @author: chris
 """
 import os
+import pathlib
 
 
 class Path:
     def __init__(self) -> None:
-        pass
+        self.path = pathlib.Path(__file__).parent
 
     @staticmethod
     def raw_data(
         relative_path: str,
         local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/raw",
         remote_abspath: str = r"/store/clues/HESTIA/RE_SIMS",
-    ) -> str:
+    ) -> pathlib.Path:
         """
         Path to raw data.
 
@@ -34,19 +35,19 @@ class Path:
 
         Returns
         -------
-        str
+        pathlib.Path
             System-dependent absolute path to file.
 
         """
         abspath = Path.choose_path(local_abspath, remote_abspath)
-        return os.path.join(abspath, relative_path)
+        return abspath.joinpath(relative_path)
 
     @staticmethod
     def processed_data(
         relative_path: str,
         local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/processed",
         remote_abspath: str = r"/z/boettner/gallifrey/data/processed",
-    ) -> str:
+    ) -> pathlib.Path:
         """
         Path to processed data.
 
@@ -63,19 +64,19 @@ class Path:
 
         Returns
         -------
-        str
+        pathlib.Path
             System-dependent absolute path to file.
 
         """
         abspath = Path.choose_path(local_abspath, remote_abspath)
-        return os.path.join(abspath, relative_path)
+        return abspath.joinpath(relative_path)
 
     @staticmethod
     def figures(
         relative_path: str,
         local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/figures",
         remote_abspath: str = r"/z/boettner/gallifrey/figures",
-    ) -> str:
+    ) -> pathlib.Path:
         """
         Path to figures.
 
@@ -92,15 +93,15 @@ class Path:
 
         Returns
         -------
-        str
+        pathlib.Path
             System-dependent absolute path to file.
 
         """
         abspath = Path.choose_path(local_abspath, remote_abspath)
-        return os.path.join(abspath, relative_path)
+        return abspath.joinpath(relative_path)
 
     @staticmethod
-    def choose_path(local_abspath: str, remote_abspath: str) -> str:
+    def choose_path(local_abspath: str, remote_abspath: str) -> pathlib.Path:
         """
         Choose path depending on system, determined by os environment name.
 
@@ -113,7 +114,7 @@ class Path:
 
         Returns
         -------
-        str
+        pathlib.Path
             Correct absolute path for system.
 
         """
@@ -121,4 +122,4 @@ class Path:
             abspath = local_abspath
         else:
             abspath = remote_abspath
-        return abspath
+        return pathlib.Path(abspath)

@@ -5,12 +5,13 @@ Created on Tue Jan 31 14:34:02 2023
 
 @author: chris
 """
+import pathlib
+
 #%%
 # load local version before pip installed version, for debugging
-import os
 import sys
 
-sys.path.append(os.path.join(sys.path[0], "src"))
+sys.path.append(pathlib.Path(__file__).parent.joinpath("src"))
 
 #%%
 import yt

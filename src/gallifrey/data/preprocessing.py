@@ -227,7 +227,7 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
             # create dir if it does not exist
             pathlib.Path(path).mkdir(parents=True, exist_ok=True)
 
-            file = os.path.join(path, f"snapshot_{self.snapshot}_main_halos.yaml")
+            file = path.joinpath(f"snapshot_{self.snapshot}_main_halos.yaml")
 
             if os.path.isfile(file) and (not overwrite):
                 raise FileExistsError("File already exists, needs overwrite=True.")

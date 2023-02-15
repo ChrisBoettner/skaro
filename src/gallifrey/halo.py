@@ -200,7 +200,7 @@ class Halo(HaloContainer):
         AttributeError
             Raised if path is not a string.
         """
-        if isinstance(self.path, str):
+        if isinstance(self.path, str | pathlib.Path):
             self.file = YAML().load(pathlib.Path(self.path))
             data = dict(self.file[self.halo_id])
             for key, value in data.items():
@@ -241,7 +241,7 @@ class Halo(HaloContainer):
         self.file[self.halo_id].insert(position, key, value, comment)
 
         if save:
-            if isinstance(self.path, str):
+            if isinstance(self.path, str | pathlib.Path):
                 with open(self.path, "w") as file:
                     YAML().dump(self.file, file)
         else:
