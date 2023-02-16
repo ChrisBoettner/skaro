@@ -14,6 +14,10 @@ from typing import Any
 from ruamel.yaml import YAML, CommentedMap
 
 from gallifrey.data.paths import Path
+from gallifrey.utilities.logging import logger
+
+# create Logger
+logger = logger(__name__)
 
 
 class HaloPreprocessingAbstract(ABC):
@@ -126,9 +130,8 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
 
         # if file dependenet on system
         if os.environ.get("USER") == "chris":
-            print(
-                "\n      DETECTED LOCAL MACHINE: Test file loaded."
-                "Resolution set to 4096. \n"
+            logger.info(
+                "DETECTED LOCAL MACHINE: Test file loaded. Resolution set to 4096"
             )
             self.resolution = 4096
 

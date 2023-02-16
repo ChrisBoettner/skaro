@@ -10,9 +10,6 @@ import pathlib
 
 
 class Path:
-    def __init__(self) -> None:
-        self.path = pathlib.Path(__file__).parent
-
     @staticmethod
     def raw_data(
         relative_path: str,
@@ -101,7 +98,11 @@ class Path:
         return abspath.joinpath(relative_path)
 
     @staticmethod
-    def choose_path(local_abspath: str, remote_abspath: str) -> pathlib.Path:
+    def choose_path(
+        local_abspath: str,
+        remote_abspath: str,
+        local_name: str = "chris",
+    ) -> pathlib.Path:
         """
         Choose path depending on system, determined by os environment name.
 
@@ -111,6 +112,8 @@ class Path:
             Local absolute path.
         remote_abspath : str
             Remote ansolute path.
+        local_name : str
+            Environment name of local machine.
 
         Returns
         -------
@@ -118,7 +121,7 @@ class Path:
             Correct absolute path for system.
 
         """
-        if os.environ.get("USER") == "chris":  # check for local system
+        if os.environ.get("USER") == local_name:  # check for local system
             abspath = local_abspath
         else:
             abspath = remote_abspath

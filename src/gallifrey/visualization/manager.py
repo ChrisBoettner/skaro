@@ -13,17 +13,28 @@ import pylab as pl
 from matplotlib.backends.backend_qt import FigureManagerQT
 from yt.visualization.plot_window import NormalPlot
 
+from gallifrey.utilities.logging import logger
+
+# create Logger
+logger = logger(__name__)
+
 
 class FigureManager:
-    """Custom Figure Manager to deal with yt plot interactively."""
+    """
+    Custom Figure Manager to deal with yt plot interactively.
+    """
 
     def __init__(self) -> None:
         """
         Initilize empty list of managers and counter for figures.
         """
+        # add display hook, closes figures when console is closed or reloaded
+        plt.install_repl_displayhook()
+
         # choose default backend
-        print("FigureManager: Setting backend to QtAgg")
-        plt.switch_backend("QtAgg")
+        if plt.get_backend() != "QtAgg":
+            logger.info("FigureManager: Setting backend to QtAgg.")
+            plt.switch_backend("QtAgg")
 
         self.num = 0
         self.managers: list[FigureManagerQT] = []
@@ -78,3 +89,7 @@ class FigureManager:
 
         else:
             raise ValueError("Choose either 'latest' or 'all'.")
+
+
+# create default figure manager
+DefaultFigureManager = FigureManager()

@@ -18,24 +18,25 @@ import yt
 
 from gallifrey.data.load import load_snapshot
 from gallifrey.halo import MainHalo
-from gallifrey.visualization.utilities import FigureManager
-
-man = FigureManager()
-
+from gallifrey.utilities.time import Timer
+from gallifrey.visualization.manager import DefaultFigureManager as fm
 
 #%%
-ds = load_snapshot(127, 4096)
-mw = MainHalo("MW", 4096, "09_18")
 
 
-p = yt.ProjectionPlot(
-    ds,
-    normal=mw.sphere(ds).quantities.angular_momentum_vector().value,
-    fields=[("gas", "density"), ("gas", "temperature")],
-    data_source=mw.sphere(ds),
-    center=mw.centre(ds),
-    width=(5000, "kpc"),
-)
-p.set_zlim(("gas", "density"), zmin=(1e-8, "g/cm**2"), zmax=(1e-2, "g/cm**2"))
+with Timer('load'):
+    ds = load_snapshot(127, 4096)
+    mw = MainHalo("MW", 4096, "09_18")
 
-man.show(p)
+with Timer('plot'):
+    p = yt.ProjectionPlot(
+        ds,
+        normal=mw.sphere(ds).quantities.angular_momentum_vector().value,
+        fields=("gas", "density"),
+        data_source=mw.sphere(ds),
+        center=mw.centre(ds),
+        width=(5000, "kpc"),
+    )
+    p.set_zlim(("gas", "density"), zmin=(1e-8, "g/cm**2"), zmax=(1e-2, "g/cm**2"))
+
+#fm.show(p)

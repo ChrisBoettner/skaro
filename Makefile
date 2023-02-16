@@ -4,14 +4,8 @@
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROFILE = default
-PROJECT_NAME = Hestia-Project
+PROJECT_NAME = gallifrey
 PYTHON_INTERPRETER = python3
-
-ifeq (,$(shell which conda))
-HAS_CONDA=False
-else
-HAS_CONDA=True
-endif
 
 #################################################################################
 # COMMANDS                                                                      #
@@ -64,7 +58,7 @@ update_environment:
 	conda activate gallifrey
 
 ## create requirements.txt with pipreqs
-create_requirements:
+save_requirements:
 	pipreqs --savepath requirements.txt src
 
 #################################################################################

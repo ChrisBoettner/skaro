@@ -12,6 +12,10 @@ import yt
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 
 from gallifrey.data.paths import Path
+from gallifrey.utilities.logging import logger
+
+# create Logger
+logger = logger(__name__)
 
 
 def load_snapshot(
@@ -46,7 +50,7 @@ def load_snapshot(
 
     """
     if os.environ.get("USER") == "chris":  # if local system, load the test file
-        print("\n      DETECTED LOCAL MACHINE: Test snapshot loaded.\n")
+        logger.info("DETECTED LOCAL MACHINE: Test snapshot loaded.")
         path = Path().raw_data(r"snapdir_127/snapshot_127.0.hdf5")
 
     else:
