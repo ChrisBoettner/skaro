@@ -22,12 +22,11 @@ from gallifrey.utilities.time import Timer
 from gallifrey.visualization.manager import DefaultFigureManager as fm
 
 #%%
-
-
 with Timer('load'):
     ds = load_snapshot(127, 4096)
     mw = MainHalo("MW", 4096, "09_18")
 
+#%%
 with Timer('plot'):
     p = yt.ProjectionPlot(
         ds,
@@ -35,8 +34,8 @@ with Timer('plot'):
         fields=("gas", "density"),
         data_source=mw.sphere(ds),
         center=mw.centre(ds),
-        width=(5000, "kpc"),
+        width=(55, "kpc"),
     )
-    p.set_zlim(("gas", "density"), zmin=(1e-8, "g/cm**2"), zmax=(1e-2, "g/cm**2"))
+    # p.set_zlim(("gas", "density"), zmin=(1e-8, "g/cm**2"), zmax=(1e-2, "g/cm**2"))
 
-#fm.show(p)
+fm.show(p)

@@ -64,7 +64,7 @@ class HaloContainer:
             raise AttributeError("X, Y and Z must be defined for centre.")
 
         return ds.arr(
-            np.array([self.X, self.Y, self.Z]) * getattr(ds, "hubble_constant"), "kpc"
+            np.array([self.X, self.Y, self.Z]) / getattr(ds, "hubble_constant"), "kpc"
         )
 
     def virial_radius(
