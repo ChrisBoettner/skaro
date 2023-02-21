@@ -22,20 +22,23 @@ from gallifrey.utilities.time import Timer
 from gallifrey.visualization.manager import DefaultFigureManager as fm
 
 #%%
-with Timer('load'):
+with Timer("load"):
     ds = load_snapshot(127, 4096)
     mw = MainHalo("MW", 4096, "09_18")
 
 #%%
-with Timer('plot'):
-    p = yt.ProjectionPlot(
-        ds,
-        normal=mw.sphere(ds).quantities.angular_momentum_vector().value,
-        fields=("gas", "density"),
-        data_source=mw.sphere(ds),
-        center=mw.centre(ds),
-        width=(55, "kpc"),
-    )
-    # p.set_zlim(("gas", "density"), zmin=(1e-8, "g/cm**2"), zmax=(1e-2, "g/cm**2"))
+fname = ds.add_deposited_particle_field(("PartType4", "GFM_Metallicity"), method="cic")
 
-fm.show(p)
+p = yt.ProjectionPlot(
+    ds,
+    #normal='z',
+    normal=mw.sphere(ds).quantities.angular_momentum_vector().value,
+    fields=fname,
+    data_source=mw.sphere(ds),
+    center=mw.centre(ds),
+    width=(55, "kpc"),
+)
+
+# p.set_unit(("PartType0", "GFM_Metallicity"), "Zsun")
+# p.set_log(("PartType0", "GFM_Metallicity"), False)
+p.show()

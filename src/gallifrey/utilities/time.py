@@ -10,7 +10,7 @@ import functools
 import time
 from builtins import BaseException
 from types import TracebackType
-from typing import Any, Callable, Type
+from typing import Any, Callable, Type, Optional
 
 from gallifrey.utilities.logging import logger
 
@@ -48,7 +48,7 @@ class Timer:
 
     def __init__(
         self,
-        name: str = "",
+        name: Optional[str] = None,
         decimals: int = 2,
         print_to_console: bool = True,
     ) -> None:
@@ -57,8 +57,8 @@ class Timer:
 
         Parameters
         ----------
-        name : str, optional
-            Optional name of timer block. The default is ''.
+        name : Optional[str], optional
+            Optional name of timer block. The default is None.
         decimals : int, optional
             Number of decimals in output. The default is 2.
         print_to_console : bool, optinal
@@ -85,4 +85,7 @@ class Timer:
         end_time = time.time()
         run_time = round(end_time - self.start_time, self.decimals)
         if self.print_to_console:
-            logger.info(f"Timer: Block {self.name!r} took {run_time} seconds.")
+            if self.name:
+                logger.info(f"Timer: Block {self.name!r} took {run_time} seconds.")
+            else:
+                logger.info(f"Timer: Block took {run_time} seconds.")

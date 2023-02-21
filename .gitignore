@@ -1,5 +1,5 @@
-# View Notebooks
-notesbooks/View.ipynb
+# Blender
+*.blend1
 
 # Data Files
 *.hdf5
