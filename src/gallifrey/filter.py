@@ -39,6 +39,7 @@ class Filter:
         ParticleIDs : ArrayLike
             List of IDs to be filtered for.
         """
+
         @yt.particle_filter(requires=["ParticleIDs"], filtered_type="PartType4")
         def halo_stars(
             pfilter: ParticleFilter,
@@ -63,6 +64,7 @@ class Filter:
         ParticleIDs : ArrayLike
             List of IDs to be filtered for.
         """
+
         @yt.particle_filter(requires=["ParticleIDs"], filtered_type="PartType0")
         def halo_gas(
             pfilter: ParticleFilter,

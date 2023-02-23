@@ -20,6 +20,7 @@ logger = logger(__name__)
 
 def timing(decimals: int = 2) -> Callable:
     """Timing function usable as decorator."""
+
     # outer function to accept argument for number of decimal points for timer
     def decorator(func: Callable) -> Callable:
         # decorator function
