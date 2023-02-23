@@ -10,7 +10,7 @@ import functools
 import time
 from builtins import BaseException
 from types import TracebackType
-from typing import Any, Callable, Type, Optional
+from typing import Any, Callable, Optional, Type
 
 from gallifrey.utilities.logging import logger
 
