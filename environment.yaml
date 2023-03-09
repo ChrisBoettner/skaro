@@ -12,6 +12,7 @@ dependencies:
   - argon2-cffi-bindings=21.2.0=py310h5764c6d_3
   - arrow=1.2.3=pyhd8ed1ab_0
   - astroid=2.13.3=py310hff52083_0
+  - astropy=5.2.1=py310h0a54255_0
   - asttokens=2.2.1=pyhd8ed1ab_0
   - atomicwrites=1.4.1=pyhd8ed1ab_0
   - attr=2.5.1=h166bdaf_1
@@ -23,7 +24,7 @@ dependencies:
   - backports.functools_lru_cache=1.6.4=pyhd8ed1ab_0
   - beautifulsoup4=4.11.1=pyha770c72_0
   - binaryornot=0.4.4=py_1
-  - black=22.12.0=py310hff52083_0
+  - black=23.1.0=py310hff52083_0
   - bleach=6.0.0=pyhd8ed1ab_0
   - bottle=0.12.23=pyhd8ed1ab_0
   - brotli=1.0.9=h166bdaf_8
@@ -234,6 +235,7 @@ dependencies:
   - platformdirs=2.6.2=pyhd8ed1ab_0
   - pluggy=1.0.0=pyhd8ed1ab_5
   - ply=3.11=py_1
+  - pooch=1.7.0=pyhd8ed1ab_0
   - prometheus_client=0.16.0=pyhd8ed1ab_0
   - prompt-toolkit=3.0.36=pyha770c72_0
   - prompt_toolkit=3.0.36=hd8ed1ab_0
@@ -245,6 +247,7 @@ dependencies:
   - pycodestyle=2.10.0=pyhd8ed1ab_0
   - pycparser=2.21=pyhd8ed1ab_0
   - pydocstyle=6.2.3=pyhd8ed1ab_0
+  - pyerfa=2.0.0.1=py310hde88566_3
   - pyflakes=3.0.1=pyhd8ed1ab_0
   - pygments=2.14.0=pyhd8ed1ab_0
   - pylint=2.15.10=pyhd8ed1ab_0
@@ -289,6 +292,7 @@ dependencies:
   - ruamel=1.0=py310hff52083_7
   - ruamel.yaml=0.17.21=py310h5764c6d_2
   - ruamel.yaml.clib=0.2.7=py310h1fa729e_1
+  - scipy=1.10.1=py310h8deb116_0
   - secretstorage=3.3.3=py310hff52083_1
   - send2trash=1.8.0=pyhd8ed1ab_0
   - setuptools=66.1.1=pyhd8ed1ab_0
