@@ -6,7 +6,7 @@ Created on Thu Feb 23 08:51:50 2023
 @author: chris
 """
 
-from typing import Type
+from typing import Any
 
 import numpy as np
 import yt
@@ -30,7 +30,27 @@ class Filter:
         """
         self.ds = ds
 
-    def add_star_filter(self, ParticleIDs: ArrayLike) -> None:
+    def add_stars(self) -> None:
+        """
+        Add filter to ds that selects PartType4 particles with
+        GFM_StellarFormationTime > 0 (meaning stars rather than wind particles).
+        """
+
+        @yt.particle_filter(
+            requires=["GFM_StellarFormationTime"],
+            filtered_type="PartType4",
+        )
+        def stars(
+            pfilter: ParticleFilter,
+            data: Any,
+        ) -> ArrayLike:
+            breakpoint()
+            age_filter = data[(pfilter.filtered_type, "GFM_StellarFormationTime")] > 0
+            return age_filter
+
+        self.ds.add_particle_filter("stars")
+
+    def add_halo_stars(self, ParticleIDs: ArrayLike) -> None:
         """
         Add filter to ds that selects PartType4 particles based on ID.
 
@@ -43,19 +63,18 @@ class Filter:
         @yt.particle_filter(requires=["ParticleIDs"], filtered_type="PartType4")
         def halo_stars(
             pfilter: ParticleFilter,
-            data: Type[YTDataContainerDataset],
+            data: Any,
         ) -> ArrayLike:
-            breakpoint()
-            new_filter = np.in1d(
-                data.__getitem__(pfilter.filtered_type, "ParticleIDs").value,
+            id_filter = np.in1d(
+                data[(pfilter.filtered_type, "ParticleIDs")].value,
                 ParticleIDs,
                 assume_unique=True,
             )
-            return new_filter
+            return id_filter
 
         self.ds.add_particle_filter("halo_stars")
 
-    def add_gas_filter(self, ParticleIDs: ArrayLike) -> None:
+    def add_halo_gas(self, ParticleIDs: ArrayLike) -> None:
         """
         Add filter to ds that selects PartType0 particles based on ID.
 
@@ -68,13 +87,13 @@ class Filter:
         @yt.particle_filter(requires=["ParticleIDs"], filtered_type="PartType0")
         def halo_gas(
             pfilter: ParticleFilter,
-            data: Type[YTDataContainerDataset],
+            data: Any,
         ) -> ArrayLike:
-            new_filter = np.in1d(
-                data.__getitem__(pfilter.filtered_type, "ParticleIDs").value,
+            id_filter = np.in1d(
+                data[(pfilter.filtered_type, "ParticleIDs")].value,
                 ParticleIDs,
                 assume_unique=True,
             )
-            return new_filter
+            return id_filter
 
         self.ds.add_particle_filter("halo_gas")

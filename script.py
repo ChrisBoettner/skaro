@@ -25,3 +25,14 @@ from gallifrey.visualization.manager import DefaultFigureManager as fm
 with Timer("load"):
     ds = load_snapshot(127, 4096)
     mw = MainHalo("MW", 4096, ds)
+    
+#%%
+with Timer('add'):
+    from gallifrey.fields import Fields
+    from gallifrey.filter import Filter
+    
+    filters = Filter(ds)
+    filters.add_stars()
+    
+    fields = Fields(ds)
+    fields.add_stellar_age()
