@@ -23,7 +23,9 @@ from gallifrey.filter import Filter
 
 
 class HaloContainer:
-    """General Halo object."""
+    """
+    General Halo object.
+    """
 
     def __init__(
         self,
