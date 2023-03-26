@@ -174,8 +174,9 @@ class Chabrier(rv_continuous):
 
     def number_of_stars(
         self,
-        M_star: float,
-        bounds: tuple | list | NDArray = (0.08, 100),
+        M_star: float | NDArray,
+        lower_bound: float | NDArray = 0.08,
+        upper_bound: float | NDArray = 100,
     ) -> ArrayLike:
         """
         Calculate the number of stars expected from Chabrier IMF for a total amount
@@ -183,10 +184,12 @@ class Chabrier(rv_continuous):
 
         Parameters
         ----------
-        M_star : float
+        M_star : float|NDArray
             Total stellar mass created.
-        bounds : tuple|list|NDArray, optional
-            Lower and upper bound of interval considered. The default is (0.08, 100).
+        lower_bound : float|NDArray, optional
+            Lower bound of considered interval of IMF. The default is 0.08.
+        upper_bound : float|NDArray, optional
+            Upper bound of considered interval of IMF. The default is 100.
 
         Returns
         -------
@@ -194,10 +197,8 @@ class Chabrier(rv_continuous):
             Number of stars born.
 
         """
-        if len(bounds) != 2:
-            raise ValueError("Bounds must be of length 2, lower and upper bound.")
         return (M_star * self.number_normalisation) * (
-            self.cdf(bounds[1]) - self.cdf(bounds[0])
+            self.cdf(upper_bound) - self.cdf(lower_bound)
         )
 
     def create_mask(self, m: NDArray) -> tuple[NDArray, NDArray]:
