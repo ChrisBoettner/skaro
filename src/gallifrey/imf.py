@@ -177,7 +177,7 @@ class Chabrier(rv_continuous):
         M_star: float | NDArray,
         lower_bound: float | NDArray = 0.08,
         upper_bound: float | NDArray = 100,
-    ) -> ArrayLike:
+    ) -> float | NDArray:
         """
         Calculate the number of stars expected from Chabrier IMF for a total amount
         of stellar mass created within the given bounds.
@@ -232,7 +232,7 @@ class Chabrier(rv_continuous):
         self.number_normalisation *= self.mass_normalisation / new_normalisation
         self.mass_normalisation = new_normalisation
 
-    def _antiderivative_lognormal(self, m: float | NDArray) -> NDArray:
+    def _antiderivative_lognormal(self, m: float | NDArray) -> float | NDArray:
         """
         Value of anti-derivative of lognormal distribution.
 
@@ -249,7 +249,7 @@ class Chabrier(rv_continuous):
         """
         return self.constant_2 * erf(np.log(np.asarray(m) / self.mean) / self.sigma_2)
 
-    def _antiderivative_powerlaw(self, m: float | NDArray) -> NDArray:
+    def _antiderivative_powerlaw(self, m: float | NDArray) -> float | NDArray:
         """
         Value of anti-derivative of powerlaw distribution.
 
