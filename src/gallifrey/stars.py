@@ -81,23 +81,6 @@ class StellarModel:
         """
         return self.calculate_interpolated_quantity(m, target_quantity="temperature")
 
-    def radius(self, m: ArrayLike) -> float | NDArray:
-        """
-        Calculate radius from mass.
-
-        Parameters
-        ----------
-        m : ArrayLike
-            Mass of stars.
-
-        Returns
-        -------
-        float | NDArray
-            Radius of stars.
-
-        """
-        return self.calculate_interpolated_quantity(m, target_quantity="radius")
-
     def mass_from_lifetime(self, lifetime: ArrayLike) -> float | NDArray:
         """
         Calculate mass from lifetime.
@@ -117,9 +100,28 @@ class StellarModel:
             lifetime, target_quantity="mass", input_quantity="lifetime", reverse=True
         )
 
+    def mass_from_luminosity(self, lifetime: ArrayLike) -> float | NDArray:
+        """
+        Calculate mass from luminosity.
+
+        Parameters
+        ----------
+        luminosity : ArrayLike
+            Luminosity of stars.
+
+        Returns
+        -------
+        float | NDArray
+            Mass of stars.
+
+        """
+        return self.calculate_interpolated_quantity(
+            lifetime, target_quantity="mass", input_quantity="luminosity"
+        )
+
     def mass_from_temperature(self, lifetime: ArrayLike) -> float | NDArray:
         """
-        Calculate mass from temoerature.
+        Calculate mass from temperature.
 
         Parameters
         ----------
