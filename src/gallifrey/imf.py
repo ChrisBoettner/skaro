@@ -18,7 +18,7 @@ class Chabrier(rv_continuous):
     """
     A probability distribution function for the Chabrier IMF.
 
-    Note: The distribution is normalised so that the integral over the pdf is equal
+    NOTE: The distribution is normalised so that the integral over the pdf is equal
     to 1. This disagrees with the common normalisation which is that the integral over
     m*pdf(x) is equal to one. In order to calculate the number of stars for a given,
     one must compensate for that (which is done e.g. in the number_of_stars method).

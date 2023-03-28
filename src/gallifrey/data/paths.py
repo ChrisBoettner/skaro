@@ -98,6 +98,35 @@ class Path:
         return abspath.joinpath(relative_path)
 
     @staticmethod
+    def interim_data(
+        relative_path: str,
+        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/interim",
+        remote_abspath: str = r"/z/boettner/gallifrey/data/interim",
+    ) -> pathlib.Path:
+        """
+        Path to interim data.
+
+        Parameters
+        ----------
+        relative_path : str
+            Relative file path.
+        local_abspath : str, optional
+            Local absolute path.
+            The default is r"/home/chris/Documents/Projects/gallifrey/data/interim".
+        remote_abspath : str, optional
+            Remote ansolute path.
+            The default is r"/z/boettner/gallifrey/data/interim".
+
+        Returns
+        -------
+        pathlib.Path
+            System-dependent absolute path to file.
+
+        """
+        abspath = Path.choose_path(local_abspath, remote_abspath)
+        return abspath.joinpath(relative_path)
+
+    @staticmethod
     def figures(
         relative_path: str,
         local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/figures",

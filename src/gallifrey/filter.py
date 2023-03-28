@@ -44,7 +44,6 @@ class Filter:
             pfilter: ParticleFilter,
             data: Any,
         ) -> ArrayLike:
-            breakpoint()
             age_filter = data[(pfilter.filtered_type, "GFM_StellarFormationTime")] > 0
             return age_filter
 
@@ -60,7 +59,10 @@ class Filter:
             List of IDs to be filtered for.
         """
 
-        @yt.particle_filter(requires=["ParticleIDs"], filtered_type="PartType4")
+        @yt.particle_filter(
+            requires=["ParticleIDs"],
+            filtered_type="PartType4",
+        )
         def halo_stars(
             pfilter: ParticleFilter,
             data: Any,
@@ -84,7 +86,10 @@ class Filter:
             List of IDs to be filtered for.
         """
 
-        @yt.particle_filter(requires=["ParticleIDs"], filtered_type="PartType0")
+        @yt.particle_filter(
+            requires=["ParticleIDs"],
+            filtered_type="PartType0",
+        )
         def halo_gas(
             pfilter: ParticleFilter,
             data: Any,

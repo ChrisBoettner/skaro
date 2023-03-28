@@ -64,3 +64,23 @@ class Fields:
             units="Gyr",
             force_override=True,
         )
+        
+# make _stellar_age seperate function
+# add planet field
+        
+# planets pseudocode:
+
+# check particle age
+# if particle age < PlanetModel.planet_formation_time:
+#     return 0
+# else:
+#     calculate maximum mass from particle age -> StellarModel.mass_from_lifetime()
+#     calculate maximum mass from occurence rate (PlanetModel.cutoff_temperature) -> StellarModel.mass_from_temperature
+#     calculate maximum mass from metallicity:
+#         calculate maximum planet formation distance -> PlanetModel.critical_formation_distance()
+#         calculate maximum mass from this distance -> StellarModel.inner_HZ_inverse()
+
+
+#     get minimum of these three masses
+#     integrate IMF up to this value -> Chabrier.number_of_stars()
+#     multiply number of stars by planet occurence rate -> PlanetModel.occurence_rate
