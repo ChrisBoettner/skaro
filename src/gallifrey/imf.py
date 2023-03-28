@@ -8,7 +8,7 @@ Created on Thu Mar 23 15:19:27 2023
 import warnings
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import NDArray
 from scipy.integrate import quad
 from scipy.special import erf
 from scipy.stats import rv_continuous
@@ -106,7 +106,7 @@ class Chabrier(rv_continuous):
         self.constant_powerlaw_1 = self._antiderivative_powerlaw(1)
         # =============================================================================
 
-    def _pdf(self, m: ArrayLike) -> NDArray:
+    def _pdf(self, m: float | NDArray) -> NDArray:
         """
         Calculate value of Chabrier probability density function (normalised to 1).
 
@@ -121,24 +121,20 @@ class Chabrier(rv_continuous):
             Value of Chabrier pdf at m.
 
         """
-        m = np.asarray(m)
-        pdf = np.empty_like(m)
-
-        # masks for masses above and below piecewise transition
-        mask, inverse_mask = self.create_mask(m)
-
-        # pdf for masses > transition point
-        pdf[mask] = self.mass_normalisation / self.ln10 * m[mask] ** (-(self.slope + 1))
-
-        # pdf for masses < transition point
-        pdf[inverse_mask] = (
-            (self.constant_1 / self.ln10)
-            * (1 / m[inverse_mask])
-            * np.exp(-(np.log10(m[inverse_mask] / self.mean) ** 2) / self.variance)
+        pdf = np.where(
+            m > self.transition_point,
+            # power law for m > transition point
+            self.mass_normalisation / self.ln10 * m ** (-(self.slope + 1)),
+            # lognormal for m < transition point
+            (
+                (self.constant_1 / self.ln10)
+                * (1 / m)
+                * np.exp(-(np.log10(m / self.mean) ** 2) / self.variance)
+            ),
         )
         return pdf
 
-    def _cdf(self, m: ArrayLike) -> NDArray:
+    def _cdf(self, m: float | NDArray) -> NDArray:
         """
         Calculate value of Chabrier cumulative distribution function (normalised to 1).
 
@@ -153,23 +149,16 @@ class Chabrier(rv_continuous):
             Value of Chabrier cdf at m.
 
         """
-        m = np.asarray(m)
-        cdf = np.empty_like(m)
-
-        # masks for masses above and below piecewise transition
-        mask, inverse_mask = self.create_mask(m)
-
-        # cdf for masses > transition point
-        cdf[mask] = (self.constant_lognormal_1 - self.constant_lognormal_008) + (
-            self._antiderivative_powerlaw(m[mask]) - self.constant_powerlaw_1
+        cdf = np.where(
+            m > self.transition_point,
+            # lognormal and power law for m > transition point
+            (
+                (self.constant_lognormal_1 - self.constant_lognormal_008)
+                + (self._antiderivative_powerlaw(m) - self.constant_powerlaw_1)
+            ),
+            # lognormal for m < transition point
+            (self._antiderivative_lognormal(m) - self.constant_lognormal_008),
         )
-
-        # cdf for masses < transition point
-        cdf[inverse_mask] = (
-            self._antiderivative_lognormal(m[inverse_mask])
-            - self.constant_lognormal_008
-        )
-
         return cdf
 
     def number_of_stars(
@@ -180,7 +169,8 @@ class Chabrier(rv_continuous):
     ) -> float | NDArray:
         """
         Calculate the number of stars expected from Chabrier IMF for a total amount
-        of stellar mass created within the given bounds.
+        of stellar mass created within the given bounds. Returns 0 if
+        lower_bound >= upper_bound.
 
         Parameters
         ----------
@@ -193,35 +183,23 @@ class Chabrier(rv_continuous):
 
         Returns
         -------
-        ArrayLike
+        float | NDArray
             Number of stars born.
 
         """
-        return (M_star * self.number_normalisation) * (
-            self.cdf(upper_bound) - self.cdf(lower_bound)
+        num_stars = np.where(
+            lower_bound < upper_bound,
+            # calculate number of stars using CDF and
+            # correct normalisation
+            (
+                (M_star * self.number_normalisation)
+                * (self.cdf(upper_bound) - self.cdf(lower_bound))
+            ),
+            # return 0 if lower_bound >= upper bound
+            0,
         )
 
-    def create_mask(self, m: NDArray) -> tuple[NDArray, NDArray]:
-        """
-        Create mask for values of m above and below transition point.
-
-        Parameters
-        ----------
-        m : NDArray
-            Mass of stars.
-
-        Returns
-        -------
-        mask: NDArray
-            Mask for masses above transition point.
-        inverse_mask: NDArray
-            Mask for masses below transition point.
-
-        """
-
-        mask = m > self.transition_point
-        inverse_mask = ~mask
-        return mask, inverse_mask
+        return num_stars
 
     def update_normalisation(self) -> None:
         """
