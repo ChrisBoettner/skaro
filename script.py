@@ -27,7 +27,7 @@ with Timer("load"):
     mw = MainHalo("MW", 4096, ds)
     
 #%%
-with Timer('add'):
+with Timer('stars'):
     from gallifrey.fields import Fields
     from gallifrey.filter import Filter
     
@@ -35,4 +35,29 @@ with Timer('add'):
     filters.add_stars()
     
     fields = Fields(ds)
-    fields.add_stellar_age()
+    fields.convert_stellar_age()
+    
+#%%
+with Timer('planets'):
+    from gallifrey.planets import PlanetModel, PlanetOccurenceModel
+    from gallifrey.stars import StellarModel, ChabrierIMF
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    data = mw.sphere()
+    planet_model = PlanetModel()
+    stellar_model = StellarModel()
+
+    imf = ChabrierIMF()
+    
+    o = PlanetOccurenceModel(stellar_model, planet_model, imf)
+
+    planets = o.number_of_planets(data)
+    effect = o.dominant_effect(data)
+
+    # TODO
+    # check correct value for solar iron abundance
+    # comment PlanetOccurenceModel (comments, docstrings, type hints)
+    # add yt field
+    # bug check
+    

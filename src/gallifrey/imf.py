@@ -14,7 +14,7 @@ from scipy.special import erf
 from scipy.stats import rv_continuous
 
 
-class Chabrier(rv_continuous):
+class ChabrierIMF(rv_continuous):
     """
     A probability distribution function for the Chabrier IMF.
 

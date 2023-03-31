@@ -15,7 +15,6 @@ from yt.data_objects.particle_filters import ParticleFilter
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
-
 class Filter:
     """Filter class to effective add new filters to yt data source."""
 

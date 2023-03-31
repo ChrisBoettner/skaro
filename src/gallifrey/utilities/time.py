@@ -87,6 +87,6 @@ class Timer:
         run_time = round(end_time - self.start_time, self.decimals)
         if self.print_to_console:
             if self.name:
-                logger.info(f"Timer: Block {self.name!r} took {run_time} seconds.")
+                logger.info(f"TIMER: Block {self.name!r} took {run_time} seconds.")
             else:
-                logger.info(f"Timer: Block took {run_time} seconds.")
+                logger.info(f"TIMER: Block took {run_time} seconds.")
