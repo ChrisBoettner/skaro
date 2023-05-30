@@ -10,8 +10,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from numpy.typing import ArrayLike, NDArray
-
+from numpy.typing import NDArray
 from scipy.integrate import quad
 from scipy.special import erf
 from scipy.stats import rv_continuous
@@ -42,12 +41,12 @@ class StellarModel:
         # HZ parameter
         self.hz_parameter = np.loadtxt(Path().external_data(r"HZ_coefficients.dat"))
         self.hz_data = np.loadtxt(Path().interim_data(r"HZ_distances.txt"))
-      
-        # solar reference parameter
-        print('>>>CHECK SOLAR IRON FRACTION<<< !!!!!!####!!!!')
-        self.log_solar_fe_fraction = np.log10(0.00003467077)
 
-    def lifetime(self, m: ArrayLike) -> float | NDArray:
+        # solar reference parameter
+        self.log_solar_fe_fraction = np.log10(0.002)  # m_Fe/m_H
+        self.solar_temperature = 5780  # in K
+
+    def lifetime(self, m: float | NDArray) -> float | NDArray:
         """
         Calculate lifetime from mass.
 
@@ -66,7 +65,7 @@ class StellarModel:
             m, target_quantity="lifetime"
         )
 
-    def luminosity(self, m: ArrayLike) -> float | NDArray:
+    def luminosity(self, m: float | NDArray) -> float | NDArray:
         """
         Calculate luminosity from mass.
 
@@ -85,7 +84,7 @@ class StellarModel:
             m, target_quantity="luminosity"
         )
 
-    def temperature(self, m: ArrayLike) -> float | NDArray:
+    def temperature(self, m: float | NDArray) -> float | NDArray:
         """
         Calculate temperature from mass.
 
@@ -104,7 +103,7 @@ class StellarModel:
             m, target_quantity="temperature"
         )
 
-    def mass_from_lifetime(self, lifetime: ArrayLike) -> float | NDArray:
+    def mass_from_lifetime(self, lifetime: float | NDArray) -> float | NDArray:
         """
         Calculate mass from lifetime.
 
@@ -123,7 +122,7 @@ class StellarModel:
             lifetime, target_quantity="mass", input_quantity="lifetime", reverse=True
         )
 
-    def mass_from_luminosity(self, lifetime: ArrayLike) -> float | NDArray:
+    def mass_from_luminosity(self, lifetime: float | NDArray) -> float | NDArray:
         """
         Calculate mass from luminosity.
 
@@ -142,7 +141,7 @@ class StellarModel:
             lifetime, target_quantity="mass", input_quantity="luminosity"
         )
 
-    def mass_from_temperature(self, lifetime: ArrayLike) -> float | NDArray:
+    def mass_from_temperature(self, lifetime: float | NDArray) -> float | NDArray:
         """
         Calculate mass from temperature.
 
@@ -161,9 +160,9 @@ class StellarModel:
             lifetime, target_quantity="mass", input_quantity="temperature"
         )
 
-    def inner_HZ(self, m: ArrayLike) -> NDArray:
+    def inner_HZ(self, m: float | NDArray) -> NDArray:
         """
-        Calculate (conservative estimate) of inner limit of HZ, based on Kopparapu 2014
+        Calculate (conservative estimate) of inner limit of HZ, based on Kopparapu2014
         estimate for Runaway Greenhouse limit for 1 Earth-massed planet.
 
         Parameters
@@ -184,8 +183,8 @@ class StellarModel:
         self,
         dist: float | NDArray,
         precalculated: bool = True,
-        left:float = 0.08,
-        right:float = 100,
+        left: float = 0.08,
+        right: float = 100,
         **kwargs: Any,
     ) -> NDArray:
         """
@@ -193,7 +192,7 @@ class StellarModel:
         given inner HZ radius.
 
         NOTE: If precalculated is True and distance is outside of interpolation range,
-        it uses the
+        it uses left and right argument to fill the values.
 
         Parameters
         ----------
@@ -203,9 +202,9 @@ class StellarModel:
             Decide if pre-calculated table should be interpolated or not. Currently only
             interpolation is implemented. The default is True.
         left: float, optional
-            Mass returned if distance is below interpolation rate. The default is 0.08.    
+            Mass returned if distance is below interpolation rate. The default is 0.08.
         right: float, optional
-            Mass returned if distance is above interpolation rate. The default is 100.         
+            Mass returned if distance is above interpolation rate. The default is 100.
         kwargs: dict[Any, Any], optional
             Additional arguments passed to np.interp .
 
@@ -216,17 +215,23 @@ class StellarModel:
 
         """
         if precalculated:
-            return np.interp(dist, self.hz_data[:, 1], self.hz_data[:, 0], 
-                             left=left, right = right, **kwargs)
+            return np.interp(
+                dist,
+                self.hz_data[:, 1],
+                self.hz_data[:, 0],
+                left=left,
+                right=right,
+                **kwargs,
+            )
 
         else:
             raise NotImplementedError(
                 "Direct inner HZ inverse calculation not yet implemented."
             )
 
-    def outer_HZ(self, m: ArrayLike) -> NDArray:
+    def outer_HZ(self, m: float | NDArray) -> NDArray:
         """
-        Calculate (conservative estimate) of outer limit of HZ, based on Kopparapu 2014
+        Calculate (conservative estimate) of outer limit of HZ, based on Kopparapu2014
         estimate for Maximum Greenhouse limit for 1 Earth-massed planet.
 
         Parameters
@@ -245,7 +250,7 @@ class StellarModel:
 
     def calculate_interpolated_stellar_parameter(
         self,
-        value: ArrayLike,
+        value: float | NDArray,
         target_quantity: str,
         input_quantity: str = "mass",
         reverse: bool = False,
@@ -274,10 +279,8 @@ class StellarModel:
             Output array.
 
         """
-        log_value = np.where(value>0, 
-                             np.ma.log10(value),
-                             -np.inf)
-        
+        log_value = np.where(value > 0, np.ma.log10(value), -np.inf)
+
         if input_quantity == "lifetime" and (not reverse):
             warnings.warn(
                 "If input quantity is lifetime, reverse should be true in "
@@ -294,7 +297,9 @@ class StellarModel:
         return np.power(10, log_quantity)
 
     def calculate_habitable_zone(
-        self, m: ArrayLike, parameter: NDArray, temperature_sun: float = 5780
+        self,
+        m: float | NDArray,
+        parameter: NDArray,
     ) -> NDArray:
         """
         Calculate edges of habitable zone for given mass of star and a set of parameter,
@@ -306,8 +311,6 @@ class StellarModel:
             Mass of stars.
         parameter : NDArray
             Parameter for effective flux calculation.
-        temperature_sun : float, optional
-            Temperature of the su. The default is 5780.
 
         Returns
         -------
@@ -325,7 +328,7 @@ class StellarModel:
                 "range = [2600,7200]K (mass range = [0.08, 1.68] M_sun)."
             )
 
-        temp_eff = temp - temperature_sun
+        temp_eff = temp - self.solar_temperature
         # calculate effective stellar flux
         temp_powers = np.array(
             [
@@ -341,6 +344,7 @@ class StellarModel:
         # calculate distance in AU
         dist = np.sqrt(lum / S_eff)
         return dist
+
 
 class ChabrierIMF(rv_continuous):
     """

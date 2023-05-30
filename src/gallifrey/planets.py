@@ -5,85 +5,22 @@ Created on Tue Mar 28 12:34:58 2023
 
 @author: chris
 """
+from typing import Optional
+
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
+from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
-class PlanetOccurenceModel:
-    def __init__(self, stellar_model, planet_model, imf):
-        self.planet_model = planet_model
-        self.stellar_model = stellar_model
-        self.imf = imf
+from gallifrey.stars import ChabrierIMF, StellarModel
 
-    def number_of_planets(self, data, lower_bound=0.08):
-        mass_limit   = np.amin(self.mass_limits(data), axis=1) 
-        stellar_ages = data["stars", "stellar_age"].value # in Gyr
-        masses = data["stars", "Masses"].to("Msun").value
-        
-        # number of eligable stars
-        star_number = self.imf.number_of_stars(masses, 
-                                               upper_bound=mass_limit,
-                                               lower_bound=lower_bound)
-        
-        # calculate number of planets by multiplying number of eligable stars with
-        # planet occurence rate
-        # set number of planets to 0 if stellar age is below planet formation time
-        planet_number = np.where(stellar_ages>=self.planet_model.planet_formation_time,
-                                 self.planet_model.occurence_rate * star_number,
-                                 0)
-        
-        return planet_number
-    
-    def dominant_effect(self, data):
-        # array of dominant effects
-        # 0 means lifetime, 1 means metallicity, 2 means temperature, 3 means planet
-        # formation time
-        
-        dominant_eff = np.argmin(self.mass_limits(data), axis=1)
-        stellar_ages = data["stars", "stellar_age"].value # in Gyr
-        
-        dominant_eff[stellar_ages<self.planet_model.planet_formation_time] = 3
-        return dominant_eff
-
-    def mass_limits(self, data):
-        limit_models = [self.mass_limit_from_lifetime, self.mass_limit_from_metallicity,
-                  self.mass_limit_from_temperature]
-        mass_limits = np.array([f(data) for f in limit_models]).T
-        return mass_limits
-
-    def mass_limit_from_lifetime(self, data):
-        stellar_ages = data["stars", "stellar_age"].value # in Gyr
-        m_from_lifetime = self.stellar_model.mass_from_lifetime(stellar_ages)
-        return m_from_lifetime
-        
-    def mass_limit_from_metallicity(self, data):
-        # calculate iron abundance for star particles
-        fe_fraction = (data['stars','Fe_fraction'].value
-                       /data['stars','H_fraction'].value)
-        fe_fraction[fe_fraction<0] = 0 # due to numerical effects some values are < 0
-        log_fe_fraction = np.where(fe_fraction>0, 
-                             np.ma.log10(fe_fraction),
-                             -np.inf)
-        
-        fe_abundance = log_fe_fraction - self.stellar_model.log_solar_fe_fraction
-        
-        # calculate maximum rocky planet formation distance
-        crit_distance = self.planet_model.critical_formation_distance(fe_abundance)
-        
-        # match maximum formation distance to inner habitable zone distance
-        m_from_metallicity = self.stellar_model.inner_HZ_inverse(crit_distance)
-        return m_from_metallicity
-    
-    def mass_limit_from_temperature(self, data):
-        cutoff_mass =  self.stellar_model.mass_from_temperature(
-                            self.planet_model.cutoff_temperature)
-        m_from_temp = np.full_like(data["stars", "stellar_age"].value, cutoff_mass)
-        return m_from_temp
 
 class PlanetModel:
     """
-    Stellar Model.
-    
+    Planet Model.
+
     """
+
     def __init__(
         self,
         planet_formation_time: float = 0.1,
@@ -131,3 +68,240 @@ class PlanetModel:
         """
 
         return np.power(10, 1.5 + np.asarray(iron_abundance))
+
+
+class PlanetOccurenceModel:
+    """
+    Model to assign planets to star particles.
+    """
+
+    def __init__(
+        self,
+        stellar_model: StellarModel,
+        planet_model: PlanetModel,
+        imf: ChabrierIMF,
+    ) -> None:
+        """
+        Initialize.
+
+        Parameters
+        ----------
+        stellar_model : StellarModel
+            Stellar model that connects mass to other stellar parameter.
+        planet_model : PlanetModel
+            Planet model that contains relevant planet parameter.
+        imf : ChabrierIMF
+            Stellar initial mass function of the star particles.
+
+        """
+
+        self.planet_model = planet_model
+        self.stellar_model = stellar_model
+        self.imf = imf
+
+    def number_of_planets(
+        self,
+        data: ArepoHDF5Dataset | YTDataContainerDataset,
+        lower_bound: float = 0.08,
+        mass_limits: Optional[NDArray] = None,
+    ) -> NDArray:
+        """
+        Calculate the number of planets associated with the star particles based on
+        the mass of the star particle and including the different cut off effects from
+        stellar lifetime, metallicity, temperature and planet formation time.
+
+        Parameters
+        ----------
+        data : ArepoHDF5Dataset | YTDataContainerDataset
+            The yt Dataset for the simulation..
+        lower_bound : float, optional
+            Lower bound for the integration of the Chabrier IMF. The default is 0.08.
+        mass_limits : NDArray, optional
+            Mass limits used to choose integration limit from. If not provided,
+            calculated using mass_limits method. Primarely implemented as argument to
+            avoid having to calculate values multiple times when calling
+            number_of_planets and dominant_effect methods. The default is None.
+
+        Returns
+        -------
+        NDArray
+            Number of planets associated with star particles.
+
+        """
+        stellar_ages = data["stars", "stellar_age"].value  # in Gyr
+        masses = data["stars", "Masses"].to("Msun").value
+
+        # calculate mass limits based on different effects, if mass limits are not
+        # provided
+        if not mass_limits:
+            mass_limits = self.mass_limits(data)
+        mass_limit = np.amin(mass_limits, axis=1)
+
+        # based on mass limit, calculate number of eligable stars
+        star_number = self.imf.number_of_stars(
+            masses, upper_bound=mass_limit, lower_bound=lower_bound
+        )
+
+        # calculate number of planets by multiplying number of eligable stars with
+        # planet occurence rate, set number of planets to 0 if stellar age is below
+        # planet formation time
+        planet_number = np.where(
+            stellar_ages >= self.planet_model.planet_formation_time,
+            self.planet_model.occurence_rate * star_number,
+            0,
+        )
+
+        return planet_number
+
+    def dominant_effect(
+        self,
+        data: ArepoHDF5Dataset | YTDataContainerDataset,
+        mass_limits: Optional[NDArray] = None,
+    ) -> NDArray:
+        """
+        Calculate the dominant effect on the number of planets based on the different
+        mass limits and planet formation time by calculating all effects and then
+        choosing the relevant one.
+        Returns array with values between 0 and 3, where the number indicates the
+        dominant effect:
+            0: lifetime
+            1: metallicity
+            2: temperature cut
+            3: planet formation time
+
+        Parameters
+        ----------
+        data : : ArepoHDF5Dataset | YTDataContainerDataset
+            The yt Dataset for the simulation.
+        mass_limits : NDArray, optional
+            Mass limits used to choose integration limit from. If not provided,
+            calculated using mass_limits method. Primarely implemented as argument to
+            avoid having to calculate values multiple times when calling
+            number_of_planets and dominant_effect methods. The default is None.
+
+        Returns
+        -------
+        dominant_eff : NDArray
+            Array containing the dominant effect on the planet number.
+
+        """
+        if not mass_limits:
+            mass_limits = self.mass_limits(data)
+        dominant_eff = np.argmin(mass_limits, axis=1)
+
+        # add planet formation time effect
+        stellar_ages = data["stars", "stellar_age"].value  # in Gyr
+        dominant_eff[stellar_ages < self.planet_model.planet_formation_time] = 3
+        return dominant_eff
+
+    def mass_limits(
+        self,
+        data: ArepoHDF5Dataset | YTDataContainerDataset,
+    ) -> NDArray:
+        """
+        Calculate maximum considered stellar mass limits based the different modelled
+        effects.
+
+        Parameters
+        ----------
+        data : : ArepoHDF5Dataset | YTDataContainerDataset
+            The yt Dataset for the simulation.
+
+        Returns
+        -------
+        mass_limits : NDArray
+            Array of mass limits (size: [number of effects, number of star particles]).
+
+        """
+        limit_models = [
+            self.mass_limit_from_lifetime,
+            self.mass_limit_from_metallicity,
+            self.mass_limit_from_temperature,
+        ]
+        mass_limits = np.array([f(data) for f in limit_models]).T
+        return mass_limits
+
+    def mass_limit_from_lifetime(
+        self,
+        data: ArepoHDF5Dataset | YTDataContainerDataset,
+    ) -> NDArray:
+        """
+        Calculate maximum considered stellar mass based on the lifetime of the star
+        particles.
+
+        Parameters
+        ----------
+        data : : ArepoHDF5Dataset | YTDataContainerDataset
+            The yt Dataset for the simulation.
+
+        Returns
+        -------
+        m_from_lifetime : NDArray
+            Array of mass limits.
+
+        """
+        stellar_ages = data["stars", "stellar_age"].value  # in Gyr
+        m_from_lifetime = self.stellar_model.mass_from_lifetime(stellar_ages)
+        return m_from_lifetime
+
+    def mass_limit_from_metallicity(
+        self,
+        data: ArepoHDF5Dataset | YTDataContainerDataset,
+    ) -> NDArray:
+        """
+        Calculate maximum considered stellar mass based on the metallicity of the
+        stellar particle, by comparing maximum distance at which planets can
+        form (Johnson2012) and inner edge of planetary HZ (Kopparapu2014).
+
+        Parameters
+        ----------
+        data : : ArepoHDF5Dataset | YTDataContainerDataset
+            The yt Dataset for the simulation.
+
+        Returns
+        -------
+        m_from_metallicity : NDArray
+            Array of mass limits.
+
+        """
+        # calculate iron abundance for star particles
+        fe_fraction = (
+            data["stars", "Fe_fraction"].value / data["stars", "H_fraction"].value
+        )
+        fe_fraction[fe_fraction < 0] = 0  # due to numerical effects some values are < 0
+        log_fe_fraction = np.where(fe_fraction > 0, np.ma.log10(fe_fraction), -np.inf)
+
+        # normalise to stellar fraction
+        fe_abundance = log_fe_fraction - self.stellar_model.log_solar_fe_fraction
+
+        # calculate maximum rocky planet formation distance
+        crit_distance = self.planet_model.critical_formation_distance(fe_abundance)
+
+        # match maximum formation distance to inner habitable zone distance
+        m_from_metallicity = self.stellar_model.inner_HZ_inverse(crit_distance)
+        return m_from_metallicity
+
+    def mass_limit_from_temperature(
+        self,
+        data: ArepoHDF5Dataset | YTDataContainerDataset,
+    ) -> NDArray:
+        """
+        Calculate maximum considered stellar mass based on the maximum
+        stellar temperature.
+
+        Parameters
+        ----------
+        data : : ArepoHDF5Dataset | YTDataContainerDataset
+            The yt Dataset for the simulation.
+
+        Returns
+        -------
+        m_from_temp : NDArray
+            Array of mass limits.
+
+        """
+        cutoff_mass = self.stellar_model.mass_from_temperature(
+            self.planet_model.cutoff_temperature
+        )
+        m_from_temp = np.full_like(data["stars", "stellar_age"].value, cutoff_mass)
+        return m_from_temp
