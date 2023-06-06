@@ -224,7 +224,12 @@ class HaloContainer:
             centre = self.centre()
 
         if normal is None:
-            normal = getattr(self.sphere().quantities, "angular_momentum_vector")()
+            if hasattr(self.sphere().quantities, "angular_momentum_vector"):
+                normal = getattr(self.sphere().quantities, "angular_momentum_vector")()
+            else:
+                raise AttributeError(
+                    "'sphere().quantities' has no attribute 'angular_momentum_vector'"
+                )
 
         if radius is None:
             radius = self.virial_radius(overdensity_constant)

@@ -284,7 +284,8 @@ class StellarModel:
         if input_quantity == "lifetime" and (not reverse):
             warnings.warn(
                 "If input quantity is lifetime, reverse should be true in "
-                "order for interpolation to work."
+                "order for interpolation to work.",
+                stacklevel=2,
             )
 
         input_data = self.log_stellar_parameter[input_quantity]
@@ -406,8 +407,10 @@ class ChabrierIMF(rv_continuous):
             warnings.warn(
                 "If any of the default parameter of the Chabrier IMF are "
                 "changed, the normalisation should be updated using "
-                "update_normalisation method."
+                "update_normalisation method.",
+                stacklevel=2,
             )
+
         self.slope = slope
         self.mean = mean
         self.variance = variance

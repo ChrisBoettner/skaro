@@ -129,7 +129,7 @@ class PlanetOccurenceModel:
 
         """
         stellar_ages = data["stars", "stellar_age"].value  # in Gyr
-        masses = data["stars", "Masses"].to("Msun").value
+        masses = data["stars", "InitialMass"].to("Msun").value
 
         # calculate mass limits based on different effects, if mass limits are not
         # provided

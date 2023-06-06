@@ -36,7 +36,11 @@ class Fields:
         """
         self.ds = ds
 
-    def convert_stellar_age(self) -> None:
+        self.star_properties_flag = (
+            False  # flag if star_properties method was executed.
+        )
+
+    def convert_star_properties(self) -> None:
         """
         Replaces stellar_age field (which contains the formation scale parameter) to
         stellar age = (current time - formation time) in Gyr.
@@ -59,6 +63,28 @@ class Fields:
             units="Gyr",
             force_override=True,
         )
+
+        logger.info(
+            "FIELDS: Adding field ('stars', 'InitialMass'), which is identical to"
+            "('stars', 'GFM_InitialMass') but with units changed from 'dimensionless'"
+            " to 'code_mass'."
+        )
+
+        def _get_stellar_mass(
+            field: DerivedField,
+            data: FieldDetector,
+        ) -> NDArray:
+            return self.ds.arr(data["stars", "GFM_InitialMass"].value, "code_mass")
+
+        self.ds.add_field(
+            ("stars", "InitialMass"),
+            function=_get_stellar_mass,
+            sampling_type="local",
+            units="code_mass",
+            force_override=True,
+        )
+
+        self.star_properties_flag = True
 
     def add_planets(
         self,
@@ -84,18 +110,7 @@ class Fields:
 
         """
 
-        if "stars" not in dir(self.ds.fields):
-            raise AttributeError(
-                "'Stars' field does not exist. Needs to be created "
-                "to calculate stellar ages using filters.add_stars()."
-            )
-
-        if str(self.ds.r["stars", "stellar_age"].units) != "Gyr":
-            raise AttributeError(
-                "('stars', 'stellar_age') field needs to be given in "
-                "'Gyr'. Convert first using convert_stellar_age() "
-                "argument."
-            )
+        self.check_star_properties()
 
         planets_occ_model = PlanetOccurenceModel(stellar_model, planet_model, imf)
 
@@ -116,6 +131,34 @@ class Fields:
         self.ds.add_field(
             ("stars", "planet_effects"),
             function=_planets_effect,
+            sampling_type="local",
+            units="auto",
+            dimensions="dimensionless",
+        )
+
+    def add_main_sequence_stars(
+        self,
+        stellar_model: StellarModel,
+        imf: ChabrierIMF,
+        supernova_bound: float = 8,
+        lower_bound: float = 0.08,
+    ) -> None:
+        self.check_star_properties()
+
+        def _star_number(field: DerivedField, data: FieldDetector) -> NDArray:
+            masses = data["stars", "InitialMass"].to("Msun").value
+            upper_bound = np.amin(
+                [
+                    np.repeat(supernova_bound, len(masses)),
+                    stellar_model.mass_from_lifetime(data["stars", "stellar_age"]),
+                ],
+                axis=0,
+            )
+            return imf.number_of_stars(masses, lower_bound, upper_bound)
+
+        self.ds.add_field(
+            ("stars", "main_sequence_stars"),
+            function=_star_number,
             sampling_type="local",
             units="auto",
             dimensions="dimensionless",
@@ -162,3 +205,15 @@ class Fields:
         )
 
         return current_time - formation_time
+
+    def check_star_properties(self) -> None:
+        stars_filter_exits = "stars" in dir(self.ds.fields)
+
+        if stars_filter_exits and self.star_properties_flag:
+            pass
+        else:
+            raise AttributeError(
+                "'stars' field has not properly been set. Run "
+                "'add_stars' method from Filter() and "
+                "'convert_star_properties' method from Fields() first."
+            )

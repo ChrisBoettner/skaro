@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jun  6 16:23:00 2023
+
+@author: chris
+"""
+
+import numpy as np
+from numpy.typing import NDArray
+
+
+def calculate_rotation_matrix(
+    initial_vector: NDArray,
+    target_vector: NDArray,
+) -> NDArray:
+    """
+    Calculate the rotation matrix that transforms initial vector to final vector.
+
+    Parameters
+    ----------
+    initial_vector : ArrayLike
+        The initial (3D) vector.
+    target_vector : ArrayLike
+        The target (3D) vector.
+
+    Returns
+    -------
+    NDArray
+        The 3x3 rotation matrix transforming the initial to the target vector.
+
+    """
+    initial_vector = np.asarray(initial_vector)
+    target_vector = np.asarray(target_vector)
+
+    # Normalize the input vectors
+    initial_vector = initial_vector / np.linalg.norm(initial_vector)
+    target_vector = target_vector / np.linalg.norm(target_vector)
+
+    # Calculate the rotation axis
+    axis = np.cross(initial_vector, target_vector)
+    axis_norm = np.linalg.norm(axis)
+    if axis_norm < 1e-8:
+        # The vectors are parallel; no rotation needed.
+        return np.eye(3)
+    axis = axis / axis_norm
+
+    # Calculate the rotation angle
+    angle = np.arccos(np.clip(np.dot(initial_vector, target_vector), -1.0, 1.0))
+
+    # Form the rotation matrix using the axis-angle formula
+    K = np.array(
+        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]]
+    )
+    rotation_matrix = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * K @ K
+    return rotation_matrix

@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue May 30 19:06:19 2023
+
+@author: chris
+"""
 from typing import Tuple
 
 import matplotlib.pyplot as plt

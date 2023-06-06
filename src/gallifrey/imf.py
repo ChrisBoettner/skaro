@@ -74,7 +74,8 @@ class ChabrierIMF(rv_continuous):
             warnings.warn(
                 "If any of the default parameter of the Chabrier IMF are "
                 "changed, the normalisation should be updated using "
-                "update_normalisation method."
+                "update_normalisation method.",
+                stacklevel=2,
             )
         self.slope = slope
         self.mean = mean

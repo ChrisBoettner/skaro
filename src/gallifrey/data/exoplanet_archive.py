@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue May 30 19:06:53 2023
+
+@author: chris
+"""
 import requests
 
 from gallifrey.data.paths import Path
