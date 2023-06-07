@@ -50,7 +50,6 @@ def data_setup(snapshot:int = 127, resolution:int = 4096, sim_id:str = "09_18"):
     return ds, mw, stellar_model, imf, planet_model
 
 def plot_setup(ds, halo):
-        gas_proj_dict = {"center":halo.centre(), "width":(55,"kpc")}
-        particle_proj_dict = {"center":halo.centre(), "width":(55,"kpc"), 
-                              "deposition":"cic"}
+        gas_proj_dict = {"width":(55,"kpc")}
+        particle_proj_dict = {"width":(55,"kpc"), "deposition":"cic"}
         return(gas_proj_dict, particle_proj_dict)

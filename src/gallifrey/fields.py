@@ -122,7 +122,7 @@ class Fields:
             function=_planets,
             sampling_type="local",
             units="auto",
-            dimensions="dimensionless",
+            dimensions=1,
         )
 
         def _planets_effect(field: DerivedField, data: FieldDetector) -> NDArray:
@@ -133,7 +133,7 @@ class Fields:
             function=_planets_effect,
             sampling_type="local",
             units="auto",
-            dimensions="dimensionless",
+            dimensions=1,
         )
 
     def add_main_sequence_stars(
@@ -161,7 +161,7 @@ class Fields:
             function=_star_number,
             sampling_type="local",
             units="auto",
-            dimensions="dimensionless",
+            dimensions=1,
         )
 
     @staticmethod
@@ -190,6 +190,9 @@ class Fields:
         formation_redshift = (
             1 / np.array(data["stars", "GFM_StellarFormationTime"])
         ) - 1
+        
+        if len(formation_redshift) == 0:
+            return data.ds.arr(np.array([]), "Gyr")
 
         # make redshift space and calculate corresponding cosmic time
         max_redshift = np.amax(formation_redshift)

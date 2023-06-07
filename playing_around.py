@@ -20,5 +20,6 @@ ds, mw, stellar_model, imf, planet_model = data_setup()
 da = mw.sphere(radius=ds.quan(30,"kpc"))
 vec = da.quantities.angular_momentum_vector()
 
+#%%
 new_ds = rotated_dataset(da, mw.centre(), vec, [('stars','planets')])
     

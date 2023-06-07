@@ -9,6 +9,7 @@ from typing import Optional
 
 import numpy as np
 import yt
+import unyt as u
 from numpy.typing import ArrayLike, NDArray
 from yt.frontends.stream.data_structures import StreamParticlesDataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
@@ -177,4 +178,27 @@ def make_dataset(
         time_unit=time_unit,
         bbox=bounding_box,
     )
+    
+    # create fields with original name
+    def create_function(field_name, units):
+        def func(field, data):
+            return particle_ds.arr(data["io", field_name[1]].value, units)
+        return func
+    
+    fields += [(particle_type, "particle_position_x"),
+               (particle_type, "particle_position_y"),
+               (particle_type, "particle_position_z"),
+               (particle_type, "particle_ones")]
+    
+    for field in fields:
+        current_field = particle_ds.r["io", field[1]]
+        if current_field.units == u.dimensionless:
+            units = "1" # needed so that units are properly understood
+        else:
+            units = current_field.units  
+            
+        particle_ds.add_field(field,
+                              function = create_function(field, units),
+                              sampling_type="local",
+                              units=units)
     return particle_ds
