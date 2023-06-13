@@ -5,12 +5,16 @@ Created on Tue Jun  6 17:02:04 2023
 
 @author: chris
 """
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
-import yt
 import unyt as u
+import yt
 from numpy.typing import ArrayLike, NDArray
+from unyt.array import unyt_array
+from unyt.unit_object import Unit
+from yt.fields.derived_field import DerivedField
+from yt.fields.field_detector import FieldDetector
 from yt.frontends.stream.data_structures import StreamParticlesDataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
@@ -63,6 +67,13 @@ def rotated_dataset(
         Rotated dataset created using yt.
 
     """
+    if target_vector != (0, 0, 1):
+        raise ValueError(
+            "Currently only a target_vector of (0,0,1) is accepted, "
+            "since this information is used to calculate perp_radius. "
+            "If another target is required, adjust perp_radius "
+            "calculation in make_dataset."
+        )
 
     if type(fields) is tuple:
         if len(fields) == 2:
@@ -161,6 +172,14 @@ def make_dataset(
             and coordinates.shape[1] == 3
         ):
             data["particle_position"] = coordinates
+
+            # calculate perpendicular radius ass.uming dataset was rotated to be face-on
+            # in z-direction (target vector = [0,0,1])
+            fields += [(particle_type, "perp_radius")]
+            data["perp_radius"] = unyt_array(
+                np.linalg.norm(coordinates[:, :2], axis=1), length_unit
+            )
+
         else:
             raise ValueError("Shape of coordinate array does not match.")
 
@@ -178,27 +197,35 @@ def make_dataset(
         time_unit=time_unit,
         bbox=bounding_box,
     )
-    
+
     # create fields with original name
-    def create_function(field_name, units):
-        def func(field, data):
+    def create_function(
+        field_name: tuple, units: str | Unit
+    ) -> Callable[[DerivedField, FieldDetector], unyt_array]:
+        def func(field: DerivedField, data: FieldDetector) -> unyt_array:
             return particle_ds.arr(data["io", field_name[1]].value, units)
+
         return func
-    
-    fields += [(particle_type, "particle_position_x"),
-               (particle_type, "particle_position_y"),
-               (particle_type, "particle_position_z"),
-               (particle_type, "particle_ones")]
-    
+
+    fields += [
+        (particle_type, "particle_position_x"),
+        (particle_type, "particle_position_y"),
+        (particle_type, "particle_position_z"),
+        (particle_type, "particle_radius"),
+        (particle_type, "particle_ones"),
+    ]
+
     for field in fields:
         current_field = particle_ds.r["io", field[1]]
         if current_field.units == u.dimensionless:
-            units = "1" # needed so that units are properly understood
+            units = "1"  # needed so that units are properly understood
         else:
-            units = current_field.units  
-            
-        particle_ds.add_field(field,
-                              function = create_function(field, units),
-                              sampling_type="local",
-                              units=units)
+            units = current_field.units
+
+        particle_ds.add_field(
+            field,
+            function=create_function(field, units),
+            sampling_type="local",
+            units=units,
+        )
     return particle_ds

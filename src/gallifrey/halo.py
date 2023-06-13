@@ -344,6 +344,7 @@ class Halo(HaloContainer):
             Raised if path is not a string.
 
         """
+        self.key = value
         self.file[self.halo_id].insert(position, key, value, comment)
 
         if save:

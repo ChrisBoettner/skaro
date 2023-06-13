@@ -6,8 +6,11 @@ Created on Tue Jun  6 16:23:00 2023
 @author: chris
 """
 
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
+from sklearn.decomposition import PCA
 
 
 def calculate_rotation_matrix(
@@ -54,3 +57,24 @@ def calculate_rotation_matrix(
     )
     rotation_matrix = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * K @ K
     return rotation_matrix
+
+
+def calculate_pca(data: NDArray, **kwargs: dict[str, Any]) -> PCA:
+    """
+    Calculate PCA on dataset.
+
+    Parameters
+    ----------
+    data : NDArray
+        The dataset.
+    **kwargs : dict[str, Any]
+        Additional parameter passed to sklearn PCA.
+
+    Returns
+    -------
+    PCA
+        Fitted PCA result.
+
+    """
+    pca = PCA(**kwargs)
+    return pca.fit(data)

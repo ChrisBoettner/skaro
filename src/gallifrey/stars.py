@@ -42,10 +42,6 @@ class StellarModel:
         self.hz_parameter = np.loadtxt(Path().external_data(r"HZ_coefficients.dat"))
         self.hz_data = np.loadtxt(Path().interim_data(r"HZ_distances.txt"))
 
-        # solar reference parameter
-        self.log_solar_fe_fraction = np.log10(0.002)  # m_Fe/m_H
-        self.solar_temperature = 5780  # in K
-
     def lifetime(self, m: float | NDArray) -> float | NDArray:
         """
         Calculate lifetime from mass.
@@ -298,9 +294,7 @@ class StellarModel:
         return np.power(10, log_quantity)
 
     def calculate_habitable_zone(
-        self,
-        m: float | NDArray,
-        parameter: NDArray,
+        self, m: float | NDArray, parameter: NDArray, solar_temperature: float = 5780
     ) -> NDArray:
         """
         Calculate edges of habitable zone for given mass of star and a set of parameter,
@@ -312,6 +306,8 @@ class StellarModel:
             Mass of stars.
         parameter : NDArray
             Parameter for effective flux calculation.
+        solar_temperature: float
+            Solar effective temperature in Kelvin.
 
         Returns
         -------
@@ -329,7 +325,7 @@ class StellarModel:
                 "range = [2600,7200]K (mass range = [0.08, 1.68] M_sun)."
             )
 
-        temp_eff = temp - self.solar_temperature
+        temp_eff = temp - solar_temperature
         # calculate effective stellar flux
         temp_powers = np.array(
             [

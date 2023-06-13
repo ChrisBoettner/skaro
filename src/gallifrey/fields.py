@@ -109,7 +109,6 @@ class Fields:
             Lower bound for the integration of the Chabrier IMF. The default is 0.08.
 
         """
-
         self.check_star_properties()
 
         planets_occ_model = PlanetOccurenceModel(stellar_model, planet_model, imf)
@@ -140,25 +139,66 @@ class Fields:
         self,
         stellar_model: StellarModel,
         imf: ChabrierIMF,
-        supernova_bound: float = 8,
         lower_bound: float = 0.08,
     ) -> None:
+        """
+        Add (number of) main sequence star field to star particles.
+
+        Parameters
+        ----------
+        stellar_model : StellarModel
+            Stellar model that connects mass to other stellar parameter.
+        imf : ChabrierIMF
+            Stellar initial mass function of the star particles.
+        lower_bound : float, optional
+            Lower bound for the integration of the Chabrier IMF. The default is 0.08.
+
+        """
+
         self.check_star_properties()
 
         def _star_number(field: DerivedField, data: FieldDetector) -> NDArray:
             masses = data["stars", "InitialMass"].to("Msun").value
-            upper_bound = np.amin(
-                [
-                    np.repeat(supernova_bound, len(masses)),
-                    stellar_model.mass_from_lifetime(data["stars", "stellar_age"]),
-                ],
-                axis=0,
-            )
+            upper_bound = stellar_model.mass_from_lifetime(data["stars", "stellar_age"])
             return imf.number_of_stars(masses, lower_bound, upper_bound)
 
         self.ds.add_field(
             ("stars", "main_sequence_stars"),
             function=_star_number,
+            sampling_type="local",
+            units="auto",
+            dimensions=1,
+        )
+
+    def add_iron_abundance(self, log_solar_fe_fraction: float = -2.7) -> None:
+        """
+        Add iron abundanace [Fe/H].
+
+        Parameters
+        ----------
+        log_solar_fe_fraction : float
+            Solar iron fraction,  m_Fe/m_H.
+
+        """
+        self.check_star_properties()
+
+        def _iron_abundance(field: DerivedField, data: FieldDetector) -> NDArray:
+            # calculate iron abundance for star particles
+            fe_fraction = (
+                data["stars", "Fe_fraction"].value / data["stars", "H_fraction"].value
+            )
+            fe_fraction[fe_fraction < 0] = 0  # some values are < 0
+            log_fe_fraction = np.where(
+                fe_fraction > 0, np.ma.log10(fe_fraction), -3
+            )  # set those values to -100
+
+            # normalise to stellar fraction
+            fe_abundance = log_fe_fraction - log_solar_fe_fraction
+            return fe_abundance
+
+        self.ds.add_field(
+            ("stars", "[Fe/H]"),
+            function=_iron_abundance,
             sampling_type="local",
             units="auto",
             dimensions=1,
@@ -190,7 +230,7 @@ class Fields:
         formation_redshift = (
             1 / np.array(data["stars", "GFM_StellarFormationTime"])
         ) - 1
-        
+
         if len(formation_redshift) == 0:
             return data.ds.arr(np.array([]), "Gyr")
 
@@ -210,6 +250,10 @@ class Fields:
         return current_time - formation_time
 
     def check_star_properties(self) -> None:
+        """
+        Sanity check if correct functions have been run before adding new fields.
+
+        """
         stars_filter_exits = "stars" in dir(self.ds.fields)
 
         if stars_filter_exits and self.star_properties_flag:

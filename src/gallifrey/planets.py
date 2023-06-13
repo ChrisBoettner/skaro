@@ -264,15 +264,7 @@ class PlanetOccurenceModel:
             Array of mass limits.
 
         """
-        # calculate iron abundance for star particles
-        fe_fraction = (
-            data["stars", "Fe_fraction"].value / data["stars", "H_fraction"].value
-        )
-        fe_fraction[fe_fraction < 0] = 0  # due to numerical effects some values are < 0
-        log_fe_fraction = np.where(fe_fraction > 0, np.ma.log10(fe_fraction), -np.inf)
-
-        # normalise to stellar fraction
-        fe_abundance = log_fe_fraction - self.stellar_model.log_solar_fe_fraction
+        fe_abundance = data["stars", "[Fe/H]"]
 
         # calculate maximum rocky planet formation distance
         crit_distance = self.planet_model.critical_formation_distance(fe_abundance)
