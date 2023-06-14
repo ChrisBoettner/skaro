@@ -9,7 +9,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import yt
-from scipy.interpolate import UnivariateSpline
+
+from gallifrey.utilities.math import calculate_smoothing_line
 
 color_palette = ["#1E0C78", "#754682", "#978489", "#F1EE88", "#B2CB9E"]
 matplotlib.rcParams["mathtext.fontset"] = "stix"
@@ -25,7 +26,7 @@ def plot_and_show(
     yscale="log",
     figsize=(10, 6),
     scatter_color="#1E0C78",
-    scatter_size=56,
+    scatter_size=60,
     line_color="#754682",
     line_width=4,
     scatter_alpha=0.4,
@@ -33,7 +34,7 @@ def plot_and_show(
     tick_fontsize=16,
     text_fontsize=20,
     smoothness=0,
-    xlim=[0, 25],
+    xlim=[0, 20],
     ylim=None,
     shading=None,
 ):
@@ -41,9 +42,8 @@ def plot_and_show(
     fig, ax = plt.subplots(figsize=figsize)
 
     # Smoothed line
-    spline = UnivariateSpline(x, y, s=smoothness)
-    xnew = np.linspace(min(x), max(x), 500)
-    ax.plot(xnew, spline(xnew), color=line_color, linewidth=line_width)
+    smoothed = calculate_smoothing_line(x, y, fraction=smoothness)
+    ax.plot(*smoothed.T, color=line_color, linewidth=line_width)
 
     # Scatter plot
     ax.scatter(x, y, c=scatter_color, s=scatter_size, alpha=scatter_alpha)
@@ -100,63 +100,65 @@ def make_1dprofiles(data_source, bins=100):
     # planet profiles
     total_planet_profile = yt.create_profile(
         data_source=data_source,
-        bin_fields=[("stars", "particle_radius")],
+        bin_fields=[("stars", "perp_radius")],
         fields=("stars", "planets"),
         n_bins=bins,
-        units={("stars", "particle_radius"): "kpc"},
-        logs={("stars", "particle_radius"): False},
+        units={("stars", "perp_radius"): "kpc"},
+        logs={("stars", "perp_radius"): False},
         weight_field=None,
         deposition="cic",
     )
 
     relative_planet_profiles = yt.create_profile(
         data_source=data_source,
-        bin_fields=[("stars", "particle_radius")],
+        bin_fields=[("stars", "perp_radius")],
         fields=[("stars", "star_weighted_planets"), ("stars", "mass_weighted_planets")],
         n_bins=bins,
-        units={("stars", "particle_radius"): "kpc"},
-        logs={("stars", "particle_radius"): False},
+        units={("stars", "perp_radius"): "kpc"},
+        logs={("stars", "perp_radius"): False},
         weight_field=("stars", "particle_ones"),
         deposition="cic",
     )
     return total_planet_profile, relative_planet_profiles
 
 
-def plot_1dprofiles(data_source, halo, bins=100):
+def plot_1dprofiles(data_source, halo, disk_height, bins=80):
     total_planet_profile, relative_planet_profiles = make_1dprofiles(data_source, bins)
 
-    # calculate bin volumes
+    # calculate bin volumes (cylinder)
     bin_sizes = total_planet_profile.x_bins.to("pc")
-    bin_volume = 4 / 3 * np.pi * bin_sizes[1:] ** 3 - bin_sizes[:-1] ** 3
+    bin_volume = (
+        np.pi * 2 * disk_height.to("pc") * (bin_sizes[1:] ** 2 - bin_sizes[:-1] ** 2)
+    )
     fig1, ax1 = plot_and_show(
         total_planet_profile.x,
         total_planet_profile[("stars", "planets")] / bin_volume,
-        xlabel="Shell Radius (kpc)",
-        ylabel=r"Planets $\left[\frac{1}{\mathrm{pc}^3}\right]$",
+        xlabel="Disk Radius (kpc)",
+        ylabel=r"Planets $\left(1/\mathrm{pc}^3\right)$",
         xscale="linear",
         yscale="log",
-        smoothness=0,
+        smoothness=0.08,
         shading=[halo.BULGE_END, halo.DISK_END],
     )
 
     fig2, ax2 = plot_and_show(
         relative_planet_profiles.x,
         relative_planet_profiles[("stars", "star_weighted_planets")],
-        xlabel="Shell Radius (kpc)",
+        xlabel="Disk Radius (kpc)",
         ylabel="Star Weighted Planets",
         xscale="linear",
         yscale="linear",
-        smoothness=0.00022,
+        smoothness=0.15,
         shading=[halo.BULGE_END, halo.DISK_END],
     )
     fig3, ax3 = plot_and_show(
         relative_planet_profiles.x,
         relative_planet_profiles[("stars", "mass_weighted_planets")],
-        xlabel="Shell Radius (kpc)",
-        ylabel="Mass Weighted Planets",
+        xlabel="Disk Radius (kpc)",
+        ylabel=r"Mass Weighted Planets $\left(1/\mathrm{M_\odot}\right)$",
         xscale="linear",
         yscale="linear",
-        smoothness=0.0015,
+        smoothness=0.15,
         shading=[halo.BULGE_END, halo.DISK_END],
     )
 

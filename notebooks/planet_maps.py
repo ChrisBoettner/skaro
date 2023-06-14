@@ -5,7 +5,6 @@ Created on Fri Jun  9 13:21:08 2023
 
 @author: chris
 """
-
 import yt
 
 
@@ -15,11 +14,12 @@ def plot_and_show(
     axis="z",
     deposition="cic",
     colormap="kelp",
-    width=(55, "kpc"),
+    width=(42, "kpc"),
     weight_field=None,
     units=None,
     zlims=None,
     logs=None,
+    zlabels=None,
     density=None,
     **kwargs,
 ):
@@ -46,6 +46,10 @@ def plot_and_show(
         for field, log in logs.items():
             plot.set_log(field, log)
 
+    if zlabels is not None:
+        for field, zlabel in zlabels.items():
+            plot.set_colorbar_label(field, zlabel)
+
     for field in fields:
         plot.set_cmap(field, colormap)
 
@@ -59,6 +63,7 @@ def plot_maps(ds, **kwargs):
         fields=[("stars", "planets")],
         units={("stars", "planets"): "1/pc**2"},
         zlims={("stars", "planets"): ((1, "1/pc**2"), (2e3, "1/pc**2"))},
+        zlabels={("stars", "planets"): r"Planets $\left(1/\mathrm{pc}^2\right)$"},
         density=True,
         **kwargs,
     )
@@ -68,12 +73,17 @@ def plot_maps(ds, **kwargs):
         fields=[("stars", "mass_weighted_planets"), ("stars", "star_weighted_planets")],
         weight_field=("stars", "particle_ones"),
         zlims={
-            ("stars", "star_weighted_planets"): ((0.0, ""), (0.5, "")),
+            ("stars", "star_weighted_planets"): ((0.1, ""), (0.5, "")),
             ("stars", "mass_weighted_planets"): ((0.5, "1/Msun"), (1.2, "1/Msun")),
         },
         logs={
             ("stars", "star_weighted_planets"): False,
             ("stars", "mass_weighted_planets"): False,
+        },
+        zlabels={
+            ("stars", "star_weighted_planets"): "Star Weighted Planets",
+            ("stars", "mass_weighted_planets"): r"Mass Weighted Planets "
+            r"$\left(1/\mathrm{M_\odot}\right)$",
         },
         **kwargs,
     )
