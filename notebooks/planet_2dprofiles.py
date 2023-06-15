@@ -110,14 +110,14 @@ def plot_2dprofiles(ds, quantity, bins=[200, 200], save=False):
         logs[("stars", "stellar_age")] = False
         y_range = (0.1, 13.7)
         sun_reference_coord = (8.2, 4.6)
-    elif quantity == "[Fe/H]":
+    elif quantity == "metallicity":
         bin_fields = [("stars", "particle_radius"), ("stars", "[Fe/H]")]
         logs[("stars", "[Fe/H]")] = False
         y_range = (-2.5, 0.8)
         sun_reference_coord = (8.2, 0)
     else:
         raise ValueError(
-            "Unknown quantity, please choose either 'stellar_age' or '[Fe/H]'."
+            "Unknown quantity, please choose either 'stellar_age' or 'metallicity'."
         )
         
     plots = generate_plots(ds, bin_fields, bins, units, logs, fields_info, 

@@ -38,6 +38,7 @@ def plot_and_show(
     xlim=[0, 30],
     ylim=None,
     shading=None,
+    extra_line=None
 ):
     # Create a figure with specified size
     fig, ax = plt.subplots(figsize=figsize)
@@ -91,6 +92,10 @@ def plot_and_show(
     # add limits
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
+    
+    if extra_line:
+        for line in extra_line:
+            ax.axvline(line, linewidth=int(line_width/3), color='black')
 
     # Adjust the padding
     plt.tight_layout()
@@ -131,6 +136,8 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
     bin_volume = (
         np.pi * 2 * disk_height.to("pc") * (bin_sizes[1:] ** 2 - bin_sizes[:-1] ** 2)
     )
+    
+    # planet density
     fig1, ax1 = plot_and_show(
         total_planet_profile.x,
         total_planet_profile[("stars", "planets")] / bin_volume,
@@ -152,6 +159,7 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
         smoothness=0.15,
         shading=[halo.BULGE_END, halo.DISK_END],
     )
+    
     fig3, ax3 = plot_and_show(
         relative_planet_profiles.x,
         relative_planet_profiles[("stars", "mass_weighted_planets")],
@@ -163,11 +171,26 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
         shading=[halo.BULGE_END, halo.DISK_END],
     )
     
-    figs = (fig1, fig2, fig3)
-    axes = (ax1, ax2, ax3)
+    # cummulative planets
+    cummulative_planets = (np.cumsum(total_planet_profile[("stars", "planets")]) 
+                           / np.sum(total_planet_profile[("stars", "planets")]))
+    fig4, ax4 = plot_and_show(
+        total_planet_profile.x,
+        cummulative_planets,
+        xlabel="Disk Radius (kpc)",
+        ylabel=r"Planets Fraction",
+        xscale="linear",
+        yscale="linear",
+        smoothness=0.08,
+        shading=[halo.BULGE_END, halo.DISK_END],
+        extra_line = [8.2]
+    )
+    
+    figs = (fig1, fig2, fig3, fig4)
+    axes = (ax1, ax2, ax3, ax4)
     
     if save:
-        names = ["planets", "sw_planets", "mw_planets"]
+        names = ["planets", "sw_planets", "mw_planets", "cummulative_planets"]
         for fig, name in zip(figs,names):
             fig.savefig(Path().figures(f"planets/1d_profile_{name}.pdf"))
 

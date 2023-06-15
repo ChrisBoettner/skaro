@@ -54,14 +54,13 @@ def data_setup(snapshot: int = 127, resolution: int = 4096, sim_id: str = "09_18
         filters.add_old_stars()
         mw.insert(
             "BULGE_END",
-            4.1,
+            5,
             "in kpc. Rough estimate for run 09_18",
         )
         mw.insert(
             "DISK_END",
-            13.5,
-            "in kpc. Point where disk luminosity decreases to "
-            "0.001*I0 from HESTIA paper Table 9 for run 09_18",
+            18,
+            "in kpc. Rough estimate for run 09_18",
         )
 
     return ds, mw, stellar_model, imf, planet_model
