@@ -6,7 +6,8 @@ Created on Wed Jun 14 16:16:45 2023
 @author: chris
 """
 import yt
-
+from gallifrey.utilities.structures import flatten_list
+from gallifrey.data.paths import Path
 
 def create_profile(data_source, bin_fields, bins, fields, units, logs, weight_field):
     """Create a profile using given parameters."""
@@ -22,7 +23,7 @@ def create_profile(data_source, bin_fields, bins, fields, units, logs, weight_fi
     )
 
 
-def create_plot(profile, field, logs, field_log, y_range, sun_reference_coord):
+def create_plot(profile, field, logs, field_log, x_range, y_range, sun_reference_coord):
     """Create a plot using a profile and other provided parameters."""
     plot = yt.PhasePlot.from_profile(profile)
     plot.annotate_text(*sun_reference_coord, "☉")
@@ -31,6 +32,7 @@ def create_plot(profile, field, logs, field_log, y_range, sun_reference_coord):
         plot.set_log(log_name, log_val)
     if field_log is False:
         plot.set_log(field, field_log)
+    plot.set_xlim(*x_range)
     plot.set_ylim(*y_range)
     plot.set_xlabel("Shell Radius (kpc)")
     plot.set_cmap(field, "kelp")
@@ -44,6 +46,7 @@ def generate_plots(
     units,
     logs,
     fields_info,
+    x_range,
     y_range,
     sun_reference_coord,
 ):
@@ -64,6 +67,7 @@ def generate_plots(
             info["fields"][0],
             logs,
             info.get("field_log_status", False),
+            x_range,
             y_range,
             sun_reference_coord,
         )
@@ -76,7 +80,7 @@ def generate_plots(
     return plots
 
 
-def plot_2dprofiles(ds, quantity, bins=[200, 200]):
+def plot_2dprofiles(ds, quantity, bins=[200, 200], save=False):
     """Generate 2D plots for the given quantity."""
     units = {("stars", "particle_radius"): "kpc"}
     logs = {("stars", "particle_radius"): False}
@@ -99,7 +103,8 @@ def plot_2dprofiles(ds, quantity, bins=[200, 200]):
             "z_lims": (0.5, 1.2),
         },
     ]
-
+    
+    x_range = (0, 25)
     if quantity == "stellar_age":
         bin_fields = [("stars", "particle_radius"), ("stars", "stellar_age")]
         logs[("stars", "stellar_age")] = False
@@ -114,7 +119,14 @@ def plot_2dprofiles(ds, quantity, bins=[200, 200]):
         raise ValueError(
             "Unknown quantity, please choose either 'stellar_age' or '[Fe/H]'."
         )
+        
+    plots = generate_plots(ds, bin_fields, bins, units, logs, fields_info, 
+                           x_range, y_range, sun_reference_coord)
 
-    return generate_plots(
-        ds, bin_fields, bins, units, logs, fields_info, y_range, sun_reference_coord
-    )
+    if save:
+        figs = flatten_list([[pl.figure for pl in list(plot.plots.values())]
+                for plot in plots])
+        names = ["planets", "sw_planets", "mw_planets"]
+        for fig, name in zip(figs, names):
+            fig.savefig(Path().figures(f"planets/2d_profile_{quantity}_{name}.pdf"))
+    return plots

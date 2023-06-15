@@ -180,7 +180,6 @@ class HaloContainer:
 
         if radius is None:
             radius = self.virial_radius(overdensity_constant)
-
         return getattr(self.ds, "box")(centre - radius, centre + radius, **kwargs)
 
     def disk(

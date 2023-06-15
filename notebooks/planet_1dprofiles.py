@@ -11,6 +11,7 @@ import numpy as np
 import yt
 
 from gallifrey.utilities.math import calculate_smoothing_line
+from gallifrey.data.paths import Path
 
 color_palette = ["#1E0C78", "#754682", "#978489", "#F1EE88", "#B2CB9E"]
 matplotlib.rcParams["mathtext.fontset"] = "stix"
@@ -34,7 +35,7 @@ def plot_and_show(
     tick_fontsize=16,
     text_fontsize=20,
     smoothness=0,
-    xlim=[0, 20],
+    xlim=[0, 30],
     ylim=None,
     shading=None,
 ):
@@ -122,7 +123,7 @@ def make_1dprofiles(data_source, bins=100):
     return total_planet_profile, relative_planet_profiles
 
 
-def plot_1dprofiles(data_source, halo, disk_height, bins=80):
+def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
     total_planet_profile, relative_planet_profiles = make_1dprofiles(data_source, bins)
 
     # calculate bin volumes (cylinder)
@@ -161,5 +162,13 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=80):
         smoothness=0.15,
         shading=[halo.BULGE_END, halo.DISK_END],
     )
+    
+    figs = (fig1, fig2, fig3)
+    axes = (ax1, ax2, ax3)
+    
+    if save:
+        names = ["planets", "sw_planets", "mw_planets"]
+        for fig, name in zip(figs,names):
+            fig.savefig(Path().figures(f"planets/1d_profile_{name}.pdf"))
 
-    return (fig1, fig2, fig3), (ax1, ax2, ax3)
+    return figs, axes
