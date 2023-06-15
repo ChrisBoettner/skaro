@@ -1,0 +1,10 @@
+MW:         # ID
+  X: 4.67897500e+04           # in kpc
+  Y: 4.82389375e+04           # in kpc
+  Z: 5.25605859e+04           # in kpc
+  M: 2.53194640e+12           # in solar masses
+M31:         # ID
+  X: 4.63394023e+04           # in kpc
+  Y: 4.83595586e+04           # in kpc
+  Z: 5.24071133e+04           # in kpc
+  M: 2.93334811e+12           # in solar masses

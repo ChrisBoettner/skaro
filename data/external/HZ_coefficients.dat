@@ -1,0 +1,19 @@
+# Coefficients for HZ model as given in Kopparapu2014. The columns, i, are arranged according to
+# the HZ limits given in the paper. 
+#
+# i = 1 --> Recent Venus for 1 ME
+# i = 2 --> Runaway Greenhouse for 1 ME
+# i = 3 --> Maximum Greenhouse for 1 ME
+# i = 4 --> Early Mars for 1 ME
+# i = 5 --> Runaway Greenhouse for 5 ME
+# i = 6 --> Runaway Greenhouse for 0.1 ME
+# First row: S_effSun(i)
+# Second row: a(i)
+# Third row:  b(i)
+# Fourth row: c(i)
+# Fifth row:  d(i)
+   1.776000E+00  1.107000E+00  3.560000E-01  3.200000E-01  1.188000E+00  9.900000E-01  
+   2.136000E-04  1.332000E-04  6.171000E-05  5.547000E-05  1.433000E-04  1.209000E-04  
+   2.533000E-08  1.580000E-08  1.698000E-09  1.526000E-09  1.707000E-08  1.404000E-08  
+   -1.33200e-11  -8.30800e-12  -3.19800e-12  -2.87400e-12  -8.96800e-12  -7.41800e-12  
+   -3.09700e-15  -1.93100e-15  -5.57500e-16  -5.01100e-16  -2.08400e-15  -1.71300e-15  

@@ -1,0 +1,8 @@
+	stellar class, radius	   , mass      , luminosity      , temperature, lifetime
+Units:   ----------- , solar radius, solar mass, solar luminosity, Kelvin,      Gyr
+
+taken from "Zombeck, Martin V. (1990). Handbook of Space Astronomy and Astrophysics (2nd ed.). Cambridge University Press"
+
+lifetime estimated as t = 10 Gyr * (M/M_sun) / (L/L_sun)
+
+
