@@ -6,6 +6,8 @@ Created on Thu Mar  9 13:10:14 2023
 @author: chris
 """
 
+from typing import Optional
+
 import numpy as np
 from astropy.cosmology import Planck15
 from numpy.typing import NDArray
@@ -140,6 +142,7 @@ class Fields:
         stellar_model: StellarModel,
         imf: ChabrierIMF,
         lower_bound: float = 0.08,
+        temperature_limit: Optional[int] = None,
     ) -> None:
         """
         Add (number of) main sequence star field to star particles.
@@ -152,7 +155,9 @@ class Fields:
             Stellar initial mass function of the star particles.
         lower_bound : float, optional
             Lower bound for the integration of the Chabrier IMF. The default is 0.08.
-
+        temperature_limit: Optional[int], optional
+            Upper integration bound from maximum planet temperature (in K). The default
+            is None, ignoring this effect.
         """
 
         self.check_star_properties()
@@ -160,6 +165,9 @@ class Fields:
         def _star_number(field: DerivedField, data: FieldDetector) -> NDArray:
             masses = data["stars", "InitialMass"].to("Msun").value
             upper_bound = stellar_model.mass_from_lifetime(data["stars", "stellar_age"])
+            if temperature_limit is not None:
+                m_temperature = stellar_model.mass_from_temperature(temperature_limit)
+                upper_bound[upper_bound > m_temperature] = m_temperature
             return imf.number_of_stars(masses, lower_bound, upper_bound)
 
         self.ds.add_field(

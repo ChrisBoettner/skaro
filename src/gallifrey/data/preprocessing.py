@@ -128,13 +128,6 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
     def load_source(self) -> list[list]:
         """Load Noam's main halo information files."""
 
-        # if file dependenet on system
-        if os.environ.get("USER") == "chris":
-            logger.info(
-                "DETECTED LOCAL MACHINE: Test file loaded. Resolution set to 4096"
-            )
-            self.resolution = 4096
-
         file_path = Path().raw_data(
             rf"LGs_{self.resolution}_GAL_FOR.txt",
             remote_abspath=r"/z/nil/codes/HESTIA/FIND_LG",

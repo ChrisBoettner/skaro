@@ -15,10 +15,4 @@ from notebooks.setup import data_setup
 
 ds, mw, stellar_model, imf, planet_model = data_setup()
 
-#%%%
-
-da = mw.sphere(radius=ds.quan(10,"kpc"))
-vec = da.quantities.angular_momentum_vector()
-
 #%%
-#new_ds = rotated_dataset(da, mw.centre(), vec, [('stars','planets')])

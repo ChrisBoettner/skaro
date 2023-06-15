@@ -345,12 +345,16 @@ class Halo(HaloContainer):
 
         """
         self.key = value
-        self.file[self.halo_id].insert(position, key, value, comment)
+        if key in self.file[self.halo_id]:
+            self.file[self.halo_id][key] = value
+        else:
+            self.file[self.halo_id].insert(position, key, value, comment)
 
         if save:
             if isinstance(self.path, str | pathlib.Path):
                 with open(self.path, "w") as file:
                     YAML().dump(self.file, file)
+                self.load()  # reload file
         else:
             raise AttributeError("Path must be str with absolute path to file.")
 

@@ -102,6 +102,7 @@ def plot_2dprofiles(ds, quantity, bins=[200, 200]):
 
     if quantity == "stellar_age":
         bin_fields = [("stars", "particle_radius"), ("stars", "stellar_age")]
+        logs[("stars", "stellar_age")] = False
         y_range = (0.1, 13.7)
         sun_reference_coord = (8.2, 4.6)
     elif quantity == "[Fe/H]":

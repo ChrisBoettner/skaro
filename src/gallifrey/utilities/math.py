@@ -9,8 +9,9 @@ Created on Tue Jun  6 16:23:00 2023
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from sklearn.decomposition import PCA
+from statsmodels.nonparametric.smoothers_lowess import lowess
 
 
 def calculate_rotation_matrix(
@@ -78,3 +79,31 @@ def calculate_pca(data: NDArray, **kwargs: dict[str, Any]) -> PCA:
     """
     pca = PCA(**kwargs)
     return pca.fit(data)
+
+
+def calculate_smoothing_line(
+    x: ArrayLike, y: ArrayLike, fraction: float = 0.1, **kwargs: dict[str, Any]
+) -> NDArray:
+    """
+    Calculate PCA on dataset.
+
+    Parameters
+    ----------
+    x : ArrayLike
+        The x data.
+    y : ArrayLike
+        The y data.
+    fraction : float
+        The fraction of points to be included in the local estimate, controls
+        smoothness.
+    **kwargs : dict[str, Any]
+        Additional parameter passed to statsmodels lowess.
+
+    Returns
+    -------
+    NDArray
+        2D array with smoothed line. first column contains the (sorted) x data, second
+        line contains the smoothed y data.
+
+    """
+    return lowess(y, x, frac=fraction)

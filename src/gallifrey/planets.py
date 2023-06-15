@@ -150,7 +150,6 @@ class PlanetOccurenceModel:
             self.planet_model.occurence_rate * star_number,
             0,
         )
-
         return planet_number
 
     def dominant_effect(
@@ -218,7 +217,7 @@ class PlanetOccurenceModel:
             self.mass_limit_from_metallicity,
             self.mass_limit_from_temperature,
         ]
-        mass_limits = np.array([f(data) for f in limit_models]).T
+        mass_limits = np.array([func(data) for func in limit_models]).T
         return mass_limits
 
     def mass_limit_from_lifetime(
