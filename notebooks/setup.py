@@ -6,8 +6,8 @@ Created on Mon Jun  5 11:58:51 2023
 @author: chris
 """
 
-
-def data_setup(snapshot: int = 127, resolution: int = 4096, sim_id: str = "09_18"):
+def data_setup(snapshot: int = 127, resolution: int = 4096, sim_id: str = "09_18",
+               include_dwarfs=True):
     # %%
     # load local version before pip installed version, for debugging
     import pathlib
@@ -25,6 +25,10 @@ def data_setup(snapshot: int = 127, resolution: int = 4096, sim_id: str = "09_18
     from gallifrey.planets import PlanetModel
     from gallifrey.stars import ChabrierIMF, StellarModel
     from gallifrey.utilities.time import Timer
+    from gallifrey.utilities.logging import logger
+
+    # create Logger
+    logger = logger(__name__)
 
     # %%
     with Timer("load data"):
@@ -48,7 +52,13 @@ def data_setup(snapshot: int = 127, resolution: int = 4096, sim_id: str = "09_18
     # %%
     with Timer("planets"):
         planet_model = PlanetModel()
-        fields.add_planets(stellar_model, planet_model, imf)
+        if include_dwarfs:
+            lower_bound = 0.08
+            logger.info(f"M dwarfs included: lower_bound = {lower_bound}.")
+        else:
+            lower_bound = 0.6
+            logger.info(f"No M dwarfs: lower_bound = {lower_bound}.")
+        fields.add_planets(stellar_model, planet_model, imf, lower_bound=lower_bound)
 
     with Timer("other"):
         filters.add_old_stars()

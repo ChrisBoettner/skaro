@@ -67,7 +67,7 @@ class Fields:
         )
 
         logger.info(
-            "FIELDS: Adding field ('stars', 'InitialMass'), which is identical to"
+            "FIELDS: Adding field ('stars', 'InitialMass'), which is identical to "
             "('stars', 'GFM_InitialMass') but with units changed from 'dimensionless'"
             " to 'code_mass'."
         )
