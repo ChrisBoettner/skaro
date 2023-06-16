@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yt
 
-from gallifrey.utilities.math import calculate_smoothing_line
 from gallifrey.data.paths import Path
+from gallifrey.utilities.math import calculate_smoothing_line
 
 color_palette = ["#1E0C78", "#754682", "#978489", "#F1EE88", "#B2CB9E"]
 matplotlib.rcParams["mathtext.fontset"] = "stix"
@@ -38,7 +38,7 @@ def plot_and_show(
     xlim=[0, 30],
     ylim=None,
     shading=None,
-    extra_line=None
+    extra_line=None,
 ):
     # Create a figure with specified size
     fig, ax = plt.subplots(figsize=figsize)
@@ -92,10 +92,10 @@ def plot_and_show(
     # add limits
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-    
+
     if extra_line:
         for line in extra_line:
-            ax.axvline(line, linewidth=int(line_width/3), color='black')
+            ax.axvline(line, linewidth=int(line_width / 3), color="black")
 
     # Adjust the padding
     plt.tight_layout()
@@ -128,7 +128,15 @@ def make_1dprofiles(data_source, bins=100):
     return total_planet_profile, relative_planet_profiles
 
 
-def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
+def plot_1dprofiles(
+    data_source,
+    halo,
+    disk_height,
+    bins=100,
+    save=False,
+    smoothness=(0.08, 0.15),
+    no_dwarfs=False,
+):
     total_planet_profile, relative_planet_profiles = make_1dprofiles(data_source, bins)
 
     # calculate bin volumes (cylinder)
@@ -136,7 +144,7 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
     bin_volume = (
         np.pi * 2 * disk_height.to("pc") * (bin_sizes[1:] ** 2 - bin_sizes[:-1] ** 2)
     )
-    
+
     # planet density
     fig1, ax1 = plot_and_show(
         total_planet_profile.x,
@@ -145,7 +153,7 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
         ylabel=r"Planets $\left(1/\mathrm{pc}^3\right)$",
         xscale="linear",
         yscale="log",
-        smoothness=0.08,
+        smoothness=smoothness[0],
         shading=[halo.BULGE_END, halo.DISK_END],
     )
 
@@ -156,10 +164,10 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
         ylabel="Star Weighted Planets",
         xscale="linear",
         yscale="linear",
-        smoothness=0.15,
+        smoothness=smoothness[1],
         shading=[halo.BULGE_END, halo.DISK_END],
     )
-    
+
     fig3, ax3 = plot_and_show(
         relative_planet_profiles.x,
         relative_planet_profiles[("stars", "mass_weighted_planets")],
@@ -167,13 +175,14 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
         ylabel=r"Mass Weighted Planets $\left(1/\mathrm{M_\odot}\right)$",
         xscale="linear",
         yscale="linear",
-        smoothness=0.15,
+        smoothness=smoothness[1],
         shading=[halo.BULGE_END, halo.DISK_END],
     )
-    
+
     # cummulative planets
-    cummulative_planets = (np.cumsum(total_planet_profile[("stars", "planets")]) 
-                           / np.sum(total_planet_profile[("stars", "planets")]))
+    cummulative_planets = np.cumsum(
+        total_planet_profile[("stars", "planets")]
+    ) / np.sum(total_planet_profile[("stars", "planets")])
     fig4, ax4 = plot_and_show(
         total_planet_profile.x,
         cummulative_planets,
@@ -181,17 +190,19 @@ def plot_1dprofiles(data_source, halo, disk_height, bins=100, save=False):
         ylabel=r"Planets Fraction",
         xscale="linear",
         yscale="linear",
-        smoothness=0.08,
+        smoothness=smoothness[0],
         shading=[halo.BULGE_END, halo.DISK_END],
-        extra_line = [8.2]
+        extra_line=[8.2],
     )
-    
+
     figs = (fig1, fig2, fig3, fig4)
     axes = (ax1, ax2, ax3, ax4)
-    
+
     if save:
         names = ["planets", "sw_planets", "mw_planets", "cummulative_planets"]
-        for fig, name in zip(figs,names):
+        if no_dwarfs:
+            names = [name + "_no_dwarfs" for name in names]
+        for fig, name in zip(figs, names):
             fig.savefig(Path().figures(f"planets/1d_profile_{name}.pdf"))
 
     return figs, axes

@@ -6,8 +6,13 @@ Created on Mon Jun  5 11:58:51 2023
 @author: chris
 """
 
-def data_setup(snapshot: int = 127, resolution: int = 4096, sim_id: str = "09_18",
-               include_dwarfs=True):
+
+def data_setup(
+    snapshot: int = 127,
+    resolution: int = 4096,
+    sim_id: str = "09_18",
+    include_dwarfs=True,
+):
     # %%
     # load local version before pip installed version, for debugging
     import pathlib
@@ -24,8 +29,8 @@ def data_setup(snapshot: int = 127, resolution: int = 4096, sim_id: str = "09_18
     from gallifrey.halo import MainHalo
     from gallifrey.planets import PlanetModel
     from gallifrey.stars import ChabrierIMF, StellarModel
-    from gallifrey.utilities.time import Timer
     from gallifrey.utilities.logging import logger
+    from gallifrey.utilities.time import Timer
 
     # create Logger
     logger = logger(__name__)

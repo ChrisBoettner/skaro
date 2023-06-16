@@ -6,8 +6,10 @@ Created on Wed Jun 14 16:16:45 2023
 @author: chris
 """
 import yt
-from gallifrey.utilities.structures import flatten_list
+
 from gallifrey.data.paths import Path
+from gallifrey.utilities.structures import flatten_list
+
 
 def create_profile(data_source, bin_fields, bins, fields, units, logs, weight_field):
     """Create a profile using given parameters."""
@@ -80,8 +82,13 @@ def generate_plots(
     return plots
 
 
-def plot_2dprofiles(ds, quantity, bins=[200, 200], save=False):
+def plot_2dprofiles(
+    ds, quantity, bins=[200, 200], save=False, no_dwarfs=False, zlims=None,
+):
     """Generate 2D plots for the given quantity."""
+    if zlims is None:
+        zlims = {}
+
     units = {("stars", "particle_radius"): "kpc"}
     logs = {("stars", "particle_radius"): False}
     fields_info = [
@@ -94,16 +101,20 @@ def plot_2dprofiles(ds, quantity, bins=[200, 200], save=False):
             "fields": [("stars", "star_weighted_planets")],
             "weight_field": ("stars", "particle_ones"),
             "field_log_status": False,
-            "z_lims": (0.1, 0.5),
+            "z_lims": zlims.get(
+                ("stars", "star_weighted_planets"), (0.1, 0.5)
+            ),  # Use provided limit if available, else use default
         },
         {
             "fields": [("stars", "mass_weighted_planets")],
             "weight_field": ("stars", "particle_ones"),
             "field_log_status": False,
-            "z_lims": (0.5, 1.2),
+            "z_lims": zlims.get(
+                ("stars", "mass_weighted_planets"), (0.5, 1.2)
+            ),  # Use provided limit if available, else use default
         },
     ]
-    
+
     x_range = (0, 25)
     if quantity == "stellar_age":
         bin_fields = [("stars", "particle_radius"), ("stars", "stellar_age")]
@@ -119,14 +130,26 @@ def plot_2dprofiles(ds, quantity, bins=[200, 200], save=False):
         raise ValueError(
             "Unknown quantity, please choose either 'stellar_age' or 'metallicity'."
         )
-        
-    plots = generate_plots(ds, bin_fields, bins, units, logs, fields_info, 
-                           x_range, y_range, sun_reference_coord)
+
+    plots = generate_plots(
+        ds,
+        bin_fields,
+        bins,
+        units,
+        logs,
+        fields_info,
+        x_range,
+        y_range,
+        sun_reference_coord,
+    )
 
     if save:
-        figs = flatten_list([[pl.figure for pl in list(plot.plots.values())]
-                for plot in plots])
-        names = ["planets", "sw_planets", "mw_planets"]
+        names = ["planets", "sw_planets", "mw_planets", "cummulative_planets"]
+        if no_dwarfs:
+            names = [name + "_no_dwarfs" for name in names]
+        figs = flatten_list(
+            [[pl.figure for pl in list(plot.plots.values())] for plot in plots]
+        )
         for fig, name in zip(figs, names):
             fig.savefig(Path().figures(f"planets/2d_profile_{quantity}_{name}.pdf"))
     return plots
