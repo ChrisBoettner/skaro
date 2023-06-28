@@ -1,0 +1,28 @@
+obtained through personal correspondance with Alexandre Emsenhuber
+
+Reference mail:
+
+Dear Chris,
+
+The values of the Monte Carlo variables unfortunately cannot be retrieved from the DACE website. I am sending you the values in a file here. The format is quite simple, with the first item on each
+line being the system number (which can be matched to the system_id in DACE after removing the leading "SIM" letters), then are given the variables in a NAME=VALUE format. These are:
+- MSTAR: the stellar mass in units of solar masses. Always 1 in this case.
+- SIGMA: the gas surface density at the reference location (r0=5.2 AU) in g/cm^2. This is "\Sigma_{g,0}" in the NGPPS I paper.
+- EXPO: the power-law index of the initial gas profile, always set to 0.9 ("\beta_g" in NGPPS I).
+- AIN: the location of the inner edge of the gas disc in AU ("r_{in}" in NGPPS I).
+- AOUT: the characteristic radius of the gas disc in AU ("r_{cut}" in NGPPS I). This is not an independent variable, as we describe in NGPPS II (see Eq. (1)).
+- FPG: the dust-to-gas ratio ("f_{D/G}" in NGPPS II)
+- MWIND: the integrated external photoevaporation rate in solar masses per year ("\dot{M}_{wind}" in NGPPS II).
+
+The initial gas disc mass can be retrieved from these parameters using Eq. (14) from the NGPPS I paper or Eq. (1) of NGPPS II.
+
+Concerning the dust-to-gas ratio, we used a distribution that is relevant from nearby stars (for the benefit of comparison with radial velocity surveys). The range of values we used already permits to
+draw certain conclusions (see Figs. 26 and 27 of NGPPS II), such as that there are no giant planets below [Fe/H] ~ -0.2. This is because for low-metallicity environments, there are no enough solids to
+form a massive core before the dispersal of the gas disc. For lower-mass planets, I believe the trends observed in those figures can be extrapolated, namely that there will be less planets of any
+mass. Again, this is a mass budget problem, because the solid contents of these discs is relatively small. 
+
+I hope this answers your e-mail. Please let me know if you still have questions.
+
+Best regards,
+Alexandre Emsenhuber
+
