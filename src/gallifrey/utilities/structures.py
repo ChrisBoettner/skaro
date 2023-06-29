@@ -7,6 +7,7 @@ Created on Thu Jun 15 14:02:09 2023
 """
 from typing import Any
 
+
 def flatten_list(nested_list: list[list]) -> list[Any]:
     """
     Flatten sublists in list.

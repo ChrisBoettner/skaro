@@ -30,7 +30,7 @@ class StellarModel:
 
         # stellar parameter
         self.stellar_parameter = pd.read_csv(
-            Path().external_data(r"stellar_main_sequence_parameter.csv")
+            Path().external_data("stellar_main_sequence_parameter.csv")
         )
 
         self.log_stellar_parameter = self.stellar_parameter.copy()

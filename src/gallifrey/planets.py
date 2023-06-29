@@ -8,11 +8,131 @@ Created on Tue Mar 28 12:34:58 2023
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 from numpy.typing import ArrayLike, NDArray
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
+from gallifrey.data.paths import Path
 from gallifrey.stars import ChabrierIMF, StellarModel
+
+
+class Population:
+    """
+    NGPPS planet population.
+
+    """
+
+    def __init__(self, population_id: str | int, age: int) -> None:
+        """
+        Initialize object, load dataframe and add planet categories.
+
+        Parameters
+        ----------
+        population_id : str | int
+            Name of the population, can be string or integer. If string, load population
+            with that name. If int, load solar-like run with number of embryos
+            correponding to that number.
+        age : int
+            Age of system at time of snapshot.
+
+        """
+        # dict mapping number of embryos to correponding population names for
+        # solar-like run
+        self.embryo_dict = {10: "ng96", 20: "ng74", 50: "ng75", 100: "ng76"}
+
+        # if population is int, map number of embryos to corresponding solar-like
+        # run
+        if isinstance(population_id, int):
+            if population_id not in self.embryo_dict.keys():
+                raise ValueError("No population corresponding to number of embryos.")
+            self.population_id = self.embryo_dict[population_id]
+        elif isinstance(population_id, str):
+            self.population_id = population_id
+        else:
+            raise ValueError("population_id must be either int or str.")
+
+        # load populations
+        self.population = pd.read_csv(
+            Path().raw_data(f"NGPPS/{population_id}/snapshot_{age}.csv")
+        )
+        # add planet categories
+        self.add_categories()
+
+        # load system properties
+        self.systems = self.load_system_properties()
+
+    def add_categories(self) -> None:
+        """
+        Adds planet categories to columns.
+
+        """
+
+        categories = {
+            "Dwarf": lambda row: row["total_mass"] < 0.5,
+            "Earth": lambda row: 0.5 <= row["total_mass"] < 2,
+            "SuperEarth": lambda row: 2 <= row["total_mass"] < 10,
+            "Neptunian": lambda row: 10 <= row["total_mass"] < 30,
+            "SubGiant": lambda row: 30 <= row["total_mass"] < 300,
+            "Giant": lambda row: 300 <= row["total_mass"],
+            "DBurning": lambda row: 4322 <= row["total_mass"],
+        }
+
+        # Apply each function to the DataFrame to create new columns
+        for category, condition in categories.items():
+            self.population[category] = self.population.apply(condition, axis=1)
+
+    def load_system_properties(self) -> pd.DataFrame:
+        """
+        Loads system monte carlo variables (needed e.g. to calculate metallicity).
+
+        Raises
+        ------
+        NotImplementedError
+            Raised if population_id does not match one of the solar-like runs, since
+            currently only those have the properties available.
+
+        Returns
+        -------
+        properties : DataFrame
+            Dataframe containing the system properties.
+
+        """
+        if self.population_id in self.embryo_dict.values():
+            # column names
+            columns = [
+                "system_id",
+                "mstar",
+                "sigma",
+                "expo",
+                "ain",
+                "aout",
+                "fpg",
+                "mwind",
+            ]
+
+            # read data file property data file
+            properties = pd.read_csv(
+                Path().external_data("NGPPS_variables.txt"),
+                delimiter=r"\s+",
+                names=columns,
+            )
+
+            # modify the 'system_id' column to remove 'system_id' prefix
+            properties["system_id"] = properties["system_id"].str[3:].astype(int)
+
+            # convert columns to float
+            for col in columns[1:]:
+                properties[col] = properties[col].map(lambda x: float(x.split("=")[1]))
+
+        else:
+            raise NotImplementedError(
+                "Population ID does not much any solar-like run. If you "
+                "use other runs with other stellar masses, the system "
+                "properties won't match."
+            )
+
+        return properties
 
 
 class PlanetModel:

@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yt
 
-from gallifrey.utilities.math import calculate_pca
 from gallifrey.particles import rotated_dataset
+from gallifrey.utilities.math import calculate_pca
 from notebooks.setup import data_setup
 
 ds, mw, stellar_model, imf, planet_model = data_setup()
