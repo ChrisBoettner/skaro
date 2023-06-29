@@ -16,6 +16,14 @@ from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 from gallifrey.data.paths import Path
 from gallifrey.stars import ChabrierIMF, StellarModel
 
+# things to do now (maybe PlanetModel from now on):
+# interpolate (KNN)
+# from sklearn.neighbors import KNeighborsRegressor
+# knn = KNeighborsRegressor(n_neighbors=5, weights='distance')
+# e = o.match_systems("Earth")
+# y = knn.fit(e.drop(columns="Earth"), e["Earth"])
+# marginalise over unwanted parameter (using their distributions)
+
 
 class Population:
     """
@@ -23,52 +31,27 @@ class Population:
 
     """
 
-    def __init__(self, population_id: str | int, age: int) -> None:
+    def __init__(self, population_id: str, age: int) -> None:
         """
         Initialize object, load dataframe and add planet categories.
 
         Parameters
         ----------
         population_id : str | int
-            Name of the population, can be string or integer. If string, load population
-            with that name. If int, load solar-like run with number of embryos
-            correponding to that number.
+            Name of the population run.
         age : int
             Age of system at time of snapshot.
 
         """
-        # dict mapping number of embryos to correponding population names for
-        # solar-like run
-        self.embryo_dict = {10: "ng96", 20: "ng74", 50: "ng75", 100: "ng76"}
-
-        # if population is int, map number of embryos to corresponding solar-like
-        # run
-        if isinstance(population_id, int):
-            if population_id not in self.embryo_dict.keys():
-                raise ValueError("No population corresponding to number of embryos.")
-            self.population_id = self.embryo_dict[population_id]
-        elif isinstance(population_id, str):
-            self.population_id = population_id
-        else:
-            raise ValueError("population_id must be either int or str.")
+        self.population_id = population_id
 
         # load populations
         self.population = pd.read_csv(
-            Path().raw_data(f"NGPPS/{population_id}/snapshot_{age}.csv")
+            Path().raw_data(f"NGPPS/{self.population_id}/snapshot_{age}.csv")
         )
+
         # add planet categories
-        self.add_categories()
-
-        # load system properties
-        self.systems = self.load_system_properties()
-
-    def add_categories(self) -> None:
-        """
-        Adds planet categories to columns.
-
-        """
-
-        categories = {
+        self.category_dict = {
             "Dwarf": lambda row: row["total_mass"] < 0.5,
             "Earth": lambda row: 0.5 <= row["total_mass"] < 2,
             "SuperEarth": lambda row: 2 <= row["total_mass"] < 10,
@@ -77,14 +60,87 @@ class Population:
             "Giant": lambda row: 300 <= row["total_mass"],
             "DBurning": lambda row: 4322 <= row["total_mass"],
         }
+        self.categories = list(self.category_dict.keys())
 
+        # add planet flags and number of planets dataframe
+        self.planets = self.count_planets()
+
+        # add system property dataframe
+        self.systems = self.get_system_properties(population_id)
+
+    def match_systems(
+        self, category: str, match_dataframe: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
+        """
+        Match the systems (i.e. the monte carlo variables used to run the simulations)
+        to a column in the match_dataframe.
+
+        Parameters
+        ----------
+        category: str
+        Category that is matched to system properties. Key of match_dataframe.
+        match_dataframe : pd.DataFrame, optional
+            Dataframe that has the "system_id" column and category columns, used for
+            matching. The default is None, which defaults to the planet number
+            dataframe.
+
+        Returns
+        -------
+        matched_systems : pd.DataFrame
+            Dataframe with system properties and matched category, merged on system_id.
+
+        """
+        if match_dataframe is None:
+            try:
+                match_dataframe = self.planets
+            except AttributeError:
+                raise AttributeError(
+                    "If no match_dataframe is given, default to "
+                    "self.planets dataframe, which needs to be "
+                    "created first using count_planets."
+                )
+
+        matched_systems = self.systems.merge(
+            match_dataframe[["system_id", category]], on="system_id"
+        )
+        matched_systems = matched_systems.drop(columns="system_id")
+        return matched_systems
+
+    def add_category_flags(self) -> None:
+        """
+        Adds planet categories to columns.
+
+        """
         # Apply each function to the DataFrame to create new columns
-        for category, condition in categories.items():
+        for category, condition in self.category_dict.items():
             self.population[category] = self.population.apply(condition, axis=1)
 
-    def load_system_properties(self) -> pd.DataFrame:
+    def count_planets(self) -> pd.DataFrame:
+        """
+        Count the number of planets for each planet category by grouping the dataframe
+        based on the system_id and then summing over the number of True values for a
+        given category.
+
+        Returns
+        -------
+        planet_number : DataFrame
+            Dataframe containing the system_id and number of planets per category for
+            that system.
+        """
+        self.add_category_flags()
+
+        planet_number = self.population.groupby("system_id")[self.categories].sum()
+        planet_number = planet_number.reset_index()  # makes system_id a column again
+        return planet_number.astype(int)
+
+    def get_system_properties(self, population_id: str) -> pd.DataFrame:
         """
         Loads system monte carlo variables (needed e.g. to calculate metallicity).
+
+        Parameters
+        ----------
+        population_id : str
+            Name of population id to retrieve system data for.
 
         Raises
         ------
@@ -98,32 +154,24 @@ class Population:
             Dataframe containing the system properties.
 
         """
-        if self.population_id in self.embryo_dict.values():
-            # column names
-            columns = [
-                "system_id",
-                "mstar",
-                "sigma",
-                "expo",
-                "ain",
-                "aout",
-                "fpg",
-                "mwind",
-            ]
+        if population_id in ["ng96", "ng74", "ng75", "ng76"]:
+            raw_properties = self._load_system_data()
 
-            # read data file property data file
-            properties = pd.read_csv(
-                Path().external_data("NGPPS_variables.txt"),
-                delimiter=r"\s+",
-                names=columns,
-            )
-
-            # modify the 'system_id' column to remove 'system_id' prefix
-            properties["system_id"] = properties["system_id"].str[3:].astype(int)
-
-            # convert columns to float
-            for col in columns[1:]:
-                properties[col] = properties[col].map(lambda x: float(x.split("=")[1]))
+            properties = pd.DataFrame()
+            properties["system_id"] = raw_properties["system_id"]
+            # calculate Monte Carlo variables as described in paper II (Emsenhuber2021):
+            # mass of gas disk
+            properties["initial_mass"] = (
+                raw_properties["aout"] / 10
+            ) * 2e-3  # paper Eq. 1
+            # metallicity
+            properties["[Fe/H]"] = np.log10(
+                raw_properties["fpg"] / 0.0149
+            )  # paper Eq. 2
+            # inner edge
+            properties["log_inner_edge"] = np.log10(raw_properties["ain"])
+            # photo evaporation
+            properties["log_photoevaporation"] = np.log10(raw_properties["mwind"])
 
         else:
             raise NotImplementedError(
@@ -132,6 +180,41 @@ class Population:
                 "properties won't match."
             )
 
+        return properties
+
+    def _load_system_data(self) -> pd.DataFrame:
+        """
+        Loads file with system properties provided by Emsenhuber and preprocess.
+
+        Returns
+        -------
+        properties : DataFrame
+            Dataframe containing the system properties.
+        """
+        # column names
+        columns = [
+            "system_id",
+            "mstar",
+            "sigma",
+            "expo",
+            "ain",
+            "aout",
+            "fpg",
+            "mwind",
+        ]
+        # read data file property data file
+        properties = pd.read_csv(
+            Path().external_data("NGPPS_variables.txt"),
+            delimiter=r"\s+",
+            names=columns,
+        )
+
+        # modify the 'system_id' column to remove 'system_id' prefix
+        properties["system_id"] = properties["system_id"].str[3:].astype(int)
+
+        # convert columns to float
+        for col in columns[1:]:
+            properties[col] = properties[col].map(lambda x: float(x.split("=")[1]))
         return properties
 
 
