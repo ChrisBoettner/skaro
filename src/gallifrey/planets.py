@@ -9,11 +9,12 @@ from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
-
 from scipy.stats import rv_continuous, truncnorm
 
+from sklearn.neighbors import KNeighborsRegressor
 from gallifrey.data.paths import Path
 
+from functools import lru_cache
 
 # things to do now (maybe PlanetModel from now on):
 #
@@ -29,6 +30,7 @@ from gallifrey.data.paths import Path
 # implement it in such a way that if function is called once, it gets saved to
 # cache (lru_cache), for performance
 # properties to cache: {age, category : callable distribution}
+
 
 class Population:
     """
@@ -336,15 +338,22 @@ class Systems:
 class PlanetModel:
     def __init__(self, population_id: str):
         self.population_id = population_id
-
         self.systems = Systems(self.population_id)
-
-        self.population_at_age: dict[int, pd.DataFrame] = {}
-
+    
+    @lru_cache(maxsize=256)
     def get_population(self, age: int) -> Population:
         population = Population(self.population_id, age)
-        self.population_at_age[age] = population
         return population
+    
+    @lru_cache(maxsize=512)
+    def function(self, age, category, neighbors=5, weights="distance", **kwargs):
+        knn = KNeighborsRegressor(n_neighbors=neighbors, weights=weights, **kwargs)
+        
+        population = self.get_population(age)
+        data = population.match_systems(category, 
+                                        system_dataframe=self.systems.variables)
+        function = knn.fit(data.drop(columns="Earth").values, data["Earth"])
+        return function
 
 
 # class PlanetModel:
