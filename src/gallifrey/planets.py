@@ -16,6 +16,8 @@ from gallifrey.data.paths import Path
 
 from functools import lru_cache
 
+from numpy.typing import ArrayLike, NDArray
+
 # things to do now (maybe PlanetModel from now on):
 #
 # interpolate (KNN)
@@ -71,15 +73,15 @@ class Population:
         self.add_category_flags()
         self.planet_number = self.count_planets()
 
-    def match_systems(
+    def match_dataframes(
         self,
         category: str,
         system_dataframe: pd.DataFrame,
         population_dataframe: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
         """
-        Match the systems (i.e. the monte carlo variables used to run the simulations)
-        to a column in the match_dataframe.
+        Match the dataframes (e.g. the monte carlo variables used to run the 
+        simulations) to a column in the population_dataframe.
 
         Parameters
         ----------
@@ -108,10 +110,10 @@ class Population:
                     "'planet_number' dataframe, which needs to be "
                     "created first using 'count_planets'."
                 )
-
+        # match on system_id   
         matched_dataframe = system_dataframe.merge(
-            population_dataframe[["system_id", category]], on="system_id"
-        ).drop(columns="system_id")
+            population_dataframe[category], on="system_id"
+        )
         return matched_dataframe
 
     def add_category_flags(self) -> None:
@@ -137,7 +139,6 @@ class Population:
 
         """
         planet_number = self.population.groupby("system_id")[self.categories].sum()
-        planet_number = planet_number.reset_index()  # makes system_id a column again
         return planet_number.astype(int)
 
 
@@ -167,7 +168,7 @@ class Systems:
         """
         # create variable dataframe
         self.variables = self.load_system_variables(population_id)
-        self.variable_names = list(self.variables.columns.drop("system_id"))
+        self.variable_names = list(self.variables.columns)
 
         # get variable bounds (upper and lower value in sample)
         self.bounds = self.variable_bounds()
@@ -231,6 +232,8 @@ class Systems:
             # photo evaporation
             system_variables["log_photoevaporation"] = np.log10(raw_variables["mwind"])
 
+            # make system_id the index of the dataframe
+            system_variables = system_variables.set_index("system_id")
         else:
             raise NotImplementedError(
                 "Population ID does not much any solar-like run. If you "
@@ -262,11 +265,41 @@ class Systems:
 
         bounds = pd.DataFrame(
             {"min": self.variables.min(), "max": self.variables.max()}
-        ).drop("system_id")
+        )
         bounds_dict = {
             index: (row["min"], row["max"]) for index, row in bounds.iterrows()
         }
         return bounds_dict
+    
+    def variable_probabilities(self,
+                               included_variables:Optional[list[str]]=None,
+                               ) -> pd.DataFrame:
+        """
+        Calculate probablities for monte carlo variables from multivariate pdf. 
+        Additional parameter, include which distributions to include can be passed
+        to multivariate pdf using kwargs.
+        
+        Parameters
+        ----------
+        included_variables : Optional[list[str]], optional
+            Names of variables included in the calucation. The default is None, which
+            includes all variables.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with system ids and probabilities.
+
+        """
+        probabilities = pd.DataFrame()
+        probabilities.index = self.variables.index.copy()
+        
+        variables = self.variables[included_variables]
+        probabilities["probability"] = self.multivariate_pdf(variables.T,
+                                                             included_variables)
+        
+        return probabilities
+        
 
     def truncated_gaussian(self, variable_name: str) -> rv_continuous:
         """
@@ -296,6 +329,47 @@ class Systems:
             b=(upper_bound - mu) / sigma,  # terms of sigma
         )
         return distribution
+    
+    def multivariate_pdf(self, variable_values: ArrayLike, 
+                         included_variables:Optional[list[str]]=None) -> NDArray:
+        """
+        Calculate the value of the multivariate pdf for some variable values by 
+        evaluating and multiplying the individual variable distributions (i.e. assume
+        they are independent). The parameter included_variables can be used to choose
+        the variables.
+
+        Parameters
+        ----------
+        variable_values : ArrayLike
+            Input values for the distributions (must have same length as distributions 
+            dict).
+        included_variables : Optional[list[str]], optional
+            Names of variables included in the calucation. The default is None, which
+            includes all variables.
+            
+        Returns
+        -------
+        result : NDArray
+            Value of the multivariate pdf.
+
+        """
+        if included_variables is None:
+            included_variables = self.variable_names
+        
+        variable_values = np.asarray(variable_values)
+        if variable_values.shape[0] != len(included_variables):
+            raise ValueError("Shape of variable_values must match number of "
+                             "distributions in distribution dict (or length of "
+                             "included_variables if given).")
+        
+        result = 1
+        distributions = [self.distributions[var] for var in included_variables]
+        for name, distribution, value in zip(included_variables,
+                                             distributions, 
+                                             variable_values):
+            if name in included_variables:
+                result *= distribution.pdf(value)
+        return result
 
     def _load_raw_system_variables(self) -> pd.DataFrame:
         """
@@ -352,8 +426,90 @@ class PlanetModel:
         population = self.get_population(age)
         data = population.match_systems(category, 
                                         system_dataframe=self.systems.variables)
-        function = knn.fit(data.drop(columns="Earth").values, data["Earth"])
-        return function
+        func = knn.fit(data.drop(columns="Earth").to_numpy(), data["Earth"])
+        return func
+    
+    @lru_cache(maxsize=512)
+    def create_(self, age, category, **kwargs):
+        func = self.function(age, category, **kwargs)
+        multi_pdf = self.systems.multivariate_pdf
+        
+        def prod(variable_values):
+            variable_values = np.asarray(variable_values)
+            if variable_values.ndim==1:
+                variable_values = variable_values.reshape(1, -1)
+            
+            return func.predict(variable_values) * multi_pdf(variable_values.T)
+        
+        return prod
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+category = "Earth"
+pop_id = "ng76"
+
+l = Population(pop_id, int(1e+10))
+o = Systems(pop_id)
+bounds = list(o.variable_bounds().values())      
+
+pdf_vals = o.variable_probabilities(included_variables=['log_initial_mass', 
+                                                        'log_inner_edge', 
+                                                        'log_photoevaporation'])
+func_vals = l.match_dataframes(category, pdf_vals).prod(axis=1) # product of number of planets and pdf
+
+def create_mgrid(bounds, num_points):
+    """Create a meshgrid from a list of bounds and calculate volume of a grid cell.
+    Each grid point is at the center of the cell. 
+    num_points is a list specifying number of points per dimension.
+    """
+    if isinstance(num_points, int):
+        num_points = [num_points] * len(bounds)
+
+    # Calculate the step size for each dimension
+    steps = [(stop - start) / n for (start, stop), n in zip(bounds, num_points)]
+
+    # Adjust the bounds so the points are in the center of the cells
+    axes = [np.linspace(start + step / 2, stop - step / 2, n) 
+            for (start, stop), step, n in zip(bounds, steps, num_points)]
+    
+    meshgrid = np.meshgrid(*axes, indexing='ij')
+
+    # Calculate volume of a grid cell
+    cell_volume = np.prod(steps)
+
+    return meshgrid, cell_volume
+
+
+
+mgrid, cell_volume = create_mgrid(bounds, num_points=[50,50,50,50])
+df = pd.DataFrame(np.column_stack([grid.ravel() for grid in mgrid]),
+                           columns=o.variable_names)
+
+knn = KNeighborsRegressor(n_neighbors=3, weights="distance")
+
+
+e = l.match_dataframes(category, o.variables)
+
+func = knn.fit(o.variables[o.variables.index.isin(func_vals.index)],
+              func_vals)
+
+# Predict the output for each grid point
+df[category] = func.predict(df)
+df['planets_binned'] = pd.cut(df[category], bins=4)
+sns.pairplot(e, hue=category, kind='hist')
+sns.pairplot(df.drop(columns=category).sample(5000), hue='planets_binned', kind='hist')
+
+
+#func = knn.fit(e.drop(columns=category),e[category])
+#df[category] = df[category].round().astype(int)
+#sns.pairplot(e, hue=category, kind='hist')
+#sns.pairplot(df.sample(5000), hue=category, kind='hist')
+
+
+# Reshape the predictions to have the same shape as the input grid
+#predictions_grid = predictions.reshape(mgrid[0].shape)
+
 
 
 # class PlanetModel:
