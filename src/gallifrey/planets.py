@@ -5,33 +5,16 @@ Created on Tue Mar 28 12:34:58 2023
 
 @author: chris
 """
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
+import methodtools
 import numpy as np
 import pandas as pd
-from scipy.stats import rv_continuous, truncnorm
-
-from sklearn.neighbors import KNeighborsRegressor
-from gallifrey.data.paths import Path
-
-from functools import lru_cache
-
 from numpy.typing import ArrayLike, NDArray
+from scipy.stats import rv_continuous, truncnorm
+from sklearn.neighbors import KNeighborsRegressor
 
-# things to do now (maybe PlanetModel from now on):
-#
-# interpolate (KNN)
-# from sklearn.neighbors import KNeighborsRegressor
-# knn = KNeighborsRegressor(n_neighbors=5, weights='distance')
-# e = o.match_systems("Earth")
-# y = knn.fit(e.drop(columns="Earth"), e["Earth"])
-
-# marginalise over unwanted parameter (using their distributions)
-# to get correct distribution
-
-# implement it in such a way that if function is called once, it gets saved to
-# cache (lru_cache), for performance
-# properties to cache: {age, category : callable distribution}
+from gallifrey.data.paths import Path
 
 
 class Population:
@@ -46,7 +29,7 @@ class Population:
 
         Parameters
         ----------
-        population_id : str | int
+        population_id : str
             Name of the population run.
         age : int
             Age of system at time of snapshot.
@@ -80,7 +63,7 @@ class Population:
         population_dataframe: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
         """
-        Match the dataframes (e.g. the monte carlo variables used to run the 
+        Match the dataframes (e.g. the monte carlo variables used to run the
         simulations) to a column in the population_dataframe.
 
         Parameters
@@ -110,7 +93,7 @@ class Population:
                     "'planet_number' dataframe, which needs to be "
                     "created first using 'count_planets'."
                 )
-        # match on system_id   
+        # match on system_id
         matched_dataframe = system_dataframe.merge(
             population_dataframe[category], on="system_id"
         )
@@ -269,13 +252,15 @@ class Systems:
         bounds_dict = {
             index: (row["min"], row["max"]) for index, row in bounds.iterrows()
         }
-        return bounds_dict    
-    
-    def sample_distribution(self, num:int, 
-                  included_variables:Optional[list[str]]=None, 
-                  ) -> pd.DataFrame:
+        return bounds_dict
+
+    def sample_distribution(
+        self,
+        num: int,
+        included_variables: Optional[list[str]] = None,
+    ) -> pd.DataFrame:
         """
-        Sample variable distribtuions. The parameter included_variables can be used to 
+        Sample variable distribtuions. The parameter included_variables can be used to
         choose the variables.
 
         Parameters
@@ -285,7 +270,7 @@ class Systems:
         included_variables : Optional[list[str]], optional
             Names of variables included in the calucation. The default is None, which
             includes all variables.
-            
+
         Returns
         -------
         result : pd.DataFrame
@@ -294,30 +279,33 @@ class Systems:
         """
         if included_variables is None:
             included_variables = self.variable_names
-        
+
         # choose distributions to include
         distributions = [self.distributions[var] for var in included_variables]
-        
+
         # sample distributions
         result = []
         for distribution in distributions:
             result.append(distribution.rvs(num))
-                  
-        return pd.DataFrame(np.array(result).T, columns = included_variables) 
 
-    def pdf(self, variable_values: ArrayLike, 
-                  included_variables:Optional[list[str]]=None, 
-                  multiply:bool = True) -> pd.DataFrame | NDArray:
+        return pd.DataFrame(np.array(result).T, columns=included_variables)
+
+    def pdf(
+        self,
+        variable_values: ArrayLike,
+        included_variables: Optional[list[str]] = None,
+        multiply: bool = True,
+    ) -> pd.DataFrame | NDArray:
         """
-        Calculate the value of the pdfs. for some variable values by evaluating the 
-        individual variable distributions. If multiply is True, the results are 
-        multiplied to form the multivariate pdf (assuming independence). The parameter 
+        Calculate the value of the pdfs. for some variable values by evaluating the
+        individual variable distributions. If multiply is True, the results are
+        multiplied to form the multivariate pdf (assuming independence). The parameter
         included_variables can be used to choose the variables.
 
         Parameters
         ----------
         variable_values : ArrayLike
-            Input values for the distributions (must have same length as distributions 
+            Input values for the distributions (must have same length as distributions
             dict).
         included_variables : Optional[list[str]], optional
             Names of variables included in the calucation. The default is None, which
@@ -325,7 +313,7 @@ class Systems:
         multiply : bool, optional
             Choose if individual pdf values should be multiplied to obtain the value
             of the multivariate pdf or not.
-            
+
         Returns
         -------
         result : pd.DataFrame | NDArray
@@ -338,27 +326,26 @@ class Systems:
 
         variable_values = np.asarray(variable_values)
         if variable_values.shape[-1] != len(included_variables):
-            raise ValueError("Shape of variable_values must match number of "
-                             "distributions in distribution dict (or length of "
-                             "included_variables if given).")
-        
-        
+            raise ValueError(
+                "Shape of variable_values must match number of "
+                "distributions in distribution dict (or length of "
+                "included_variables if given)."
+            )
+
         distributions = [self.distributions[var] for var in included_variables]
-        
+
         result = []
-        for name, distribution, value in zip(included_variables,
-                                             distributions, 
-                                             variable_values):
+        for distribution, value in zip(distributions, variable_values):
             result.append(distribution.pdf(value))
-        
-        result = np.array(result)
-        if result.ndim==1:
-            result = result.reshape(1, -1)
-            
+
+        result_array = np.array(result)
+        if result_array.ndim == 1:
+            result_array = result_array.reshape(1, -1)
+
         if multiply:
-            return np.prod(result,axis=1)
+            return np.prod(result_array, axis=1)
         else:
-            return pd.DataFrame(result, columns = included_variables)    
+            return pd.DataFrame(result_array, columns=included_variables)
 
     def _truncated_gaussian(self, variable_name: str) -> rv_continuous:
         """
@@ -388,9 +375,7 @@ class Systems:
             b=(upper_bound - mu) / sigma,  # terms of sigma
         )
         return distribution
-    
 
-                                
     def _load_raw_system_variables(self) -> pd.DataFrame:
         """
         Loads file with system variables provided by Emsenhuber and preprocess.
@@ -430,346 +415,156 @@ class Systems:
 
 
 class PlanetModel:
+    """
+    Planet model.
+
+    """
+
     def __init__(self, population_id: str):
+        """
+        Initialize a planet model based on specific population.
+
+        Parameters
+        population_id : str
+            Name of the population run.
+        """
+
         self.population_id = population_id
+        # load systems information
         self.systems = Systems(self.population_id)
-    
-    @lru_cache(maxsize=256)
+
+    @methodtools.lru_cache(maxsize=256)
     def get_population(self, age: int) -> Population:
-        population = Population(self.population_id, age)
-        return population
-    
-    @lru_cache(maxsize=512)
-    def get_planet_function(self, age, category, neighbors=3, 
-                            weights="uniform", **kwargs):
-        knn = KNeighborsRegressor(n_neighbors=neighbors, weights=weights, **kwargs)
-        
+        """
+        Retrieve population for the given age using the lru_cache for efficiency.
+
+        Parameters
+        ----------
+        age : int
+            Age of the population to retrieve.
+
+        Returns
+        ----------
+        Population
+            An instance of the Population class.
+        """
+        return Population(self.population_id, age)
+
+    @methodtools.lru_cache(maxsize=512)
+    def get_planet_function(
+        self,
+        age: int,
+        category: str,
+        neighbors: int = 3,
+        weights: str = "uniform",
+        **kwargs: Any,
+    ) -> KNeighborsRegressor:
+        """
+        Calculate KNN interpolation for a population snapshot
+        for a given age and category.
+
+        Parameters
+        ----------
+        age : int
+            Age of system at time of snapshot.
+        category: str
+            Category that is matched to system variables.
+        neighbors : int, optional
+            Number of neighbors to use in the KNN regression. The default is 3.
+        weights : str, optional
+            Weight function to use in prediction for KNN regression. he default is
+            'uniform'.
+        kwargs : dict
+            Additional arguments to pass to the KNeighborsRegressor.
+
+        Returns
+        ----------
+        KNeighborsRegressor
+            KNeighborsRegressor model fitted on the population data.
+        """
+        # Obtain population and match data with system variables
         population = self.get_population(age)
-        data = population.match_dataframes(category, 
-                                           system_dataframe=self.systems.variables)
-        function = knn.fit(data.drop(columns=category), data[category])
-        return function
-    
-    def prediction(self, variables, age, category, return_full=False, **kwargs):
+        data = population.match_dataframes(
+            category, system_dataframe=self.systems.variables
+        )
+
+        # Fit the KNN regressor with the data
+        knn = KNeighborsRegressor(n_neighbors=neighbors, weights=weights, **kwargs)
+        return knn.fit(data.drop(columns=category), data[category])
+
+    def prediction(
+        self,
+        variables: pd.DataFrame,
+        age: int,
+        categories: str | list,
+        return_full: bool = False,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
+        """
+        Predict a number of planets in a given category given some input system
+        variable using the KNN regressor. Variables that are not directly passed are
+        sampled from systems variable distributions, meaning the output is stochastic.
+
+        Parameters
+        ----------
+        variables : pd.DataFrame
+            DataFrame of variables to be used in the prediction.
+        age : int
+            Age of system at time of snapshot.
+        category: str
+            Category that is matched to system variables.
+        return_full : bool, optional
+            If True, return the full DataFrame (variables + prediction). Otherwise,
+            return only the category column (i.e. the prediction).
+        kwargs : dict
+            Additional arguments to pass to the get_planet_function method.
+
+        Returns
+        ----------
+        pd.DataFrame
+            The predicted values as dataframe. If return_full=True, this includes
+            the sample of variables used for the calculation.
+        """
+        if isinstance(categories, str):
+            categories = [categories]
+
+        # Sample the system variable distributions
         sample = self.systems.sample_distribution(variables.shape[0])
-        
+
+        # Replace sample variables with the passed variables
         for column in variables.columns:
             sample[column] = variables[column]
-        
-        knn = self.get_planet_function(age, category, **kwargs)
-        
-        sample[category] = knn.predict(sample)
-        
+
+        # Get the KNN model and predict the category
+        prediction_dataframe = sample.copy()
+        for category in categories:
+            knn = self.get_planet_function(age, category, **kwargs)
+            prediction_dataframe[category] = knn.predict(sample)
+
         if return_full:
-            return sample
+            return prediction_dataframe
         else:
-            return sample[category]
+            return prediction_dataframe[categories]
+
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-category = "Earth"
+categories = ["Earth", "Giant"]
 pop_id = "ng76"
-samples = int(1e+6)
+samples = int(1e6)
 
 model = PlanetModel(pop_id)
 
-variable = pd.DataFrame(np.linspace(*model.systems.bounds["[Fe/H]"], samples), 
-                        columns=["[Fe/H]"])
+variable = pd.DataFrame(
+    np.linspace(*model.systems.bounds["[Fe/H]"], samples), columns=["[Fe/H]"]
+)
 
-result = model.prediction(variable, int(1e+10), category, return_full=True)
-
-
-result['planets_binned'] = pd.cut(result[category], bins=4)
-
-sns.pairplot(result.drop(columns=category), 
-            hue='planets_binned', kind='hist')
+result = model.prediction(variable, int(1e10), categories, return_full=True)
 
 
-
-
-
-# class PlanetModel:
-#     """
-#     Planet Model.
-
-#     """
-
-#     def __init__(
-#         self,
-#         planet_formation_time: float = 0.1,
-#         cutoff_temperature: float = 7200,
-#         occurence_rate: float = 0.5,
-#     ) -> None:
-#         """
-#         Initialize.
-
-#         Parameters
-#         -------
-#         planet_formation_time : float, optional
-#             Estimated time scale for rocky (habitable) planet formation in Gyr. The
-#             default is 0.1
-#         cutoff_temperature : float, optional
-#             Maximum stellar effective temperature for which planets are considered in
-#             K.
-#             We estimate the occurence rate for more massive stars at 0, since little
-#             data is available on occurence rates and habitable zones. The default
-#             is 7200.
-#         occurence_rate : float, optional
-#             Occurence rate of planets in habitable zone below temperature cutoff. The
-#             default value is 0.5 (for M and FGK spectral types), from Bryson2020
-#             and Hsu2020.
-
-#         """
-#         self.planet_formation_time = planet_formation_time  # in Gyr
-#         self.cutoff_temperature = cutoff_temperature  # in K
-#         self.occurence_rate = occurence_rate
-
-#     @staticmethod
-#     def critical_formation_distance(iron_abundance: ArrayLike) -> NDArray:
-#         """
-#         Critical distance for planet formation based on [Fe/H] estimated by
-#         Johnson2012.
-
-#         Parameters
-#         ----------
-#         fe_fraction : Arraylike
-#             Iron abundace [Fe/H] as estimator of metallicity.
-
-#         Returns
-#         -------
-#         NDArray
-#             Estimated maximum distance for planet formation.
-
-#         """
-
-#         return np.power(10, 1.5 + np.asarray(iron_abundance))
-
-
-# class PlanetOccurenceModel:
-#     """
-#     Model to assign planets to star particles.
-#     """
-
-#     def __init__(
-#         self,
-#         stellar_model: StellarModel,
-#         planet_model: PlanetModel,
-#         imf: ChabrierIMF,
-#     ) -> None:
-#         """
-#         Initialize.
-
-#         Parameters
-#         ----------
-#         stellar_model : StellarModel
-#             Stellar model that connects mass to other stellar parameter.
-#         planet_model : PlanetModel
-#             Planet model that contains relevant planet parameter.
-#         imf : ChabrierIMF
-#             Stellar initial mass function of the star particles.
-
-#         """
-
-#         self.planet_model = planet_model
-#         self.stellar_model = stellar_model
-#         self.imf = imf
-
-#     def number_of_planets(
-#         self,
-#         data: ArepoHDF5Dataset | YTDataContainerDataset,
-#         lower_bound: float = 0.08,
-#         mass_limits: Optional[NDArray] = None,
-#     ) -> NDArray:
-#         """
-#         Calculate the number of planets associated with the star particles based on
-#         the mass of the star particle and including the different cut off effects from
-#         stellar lifetime, metallicity, temperature and planet formation time.
-
-#         Parameters
-#         ----------
-#         data : ArepoHDF5Dataset | YTDataContainerDataset
-#             The yt Dataset for the simulation..
-#         lower_bound : float, optional
-#             Lower bound for the integration of the Chabrier IMF. The default is 0.08.
-#         mass_limits : NDArray, optional
-#             Mass limits used to choose integration limit from. If not provided,
-#             calculated using mass_limits method. Primarely implemented as argument to
-#             avoid having to calculate values multiple times when calling
-#             number_of_planets and dominant_effect methods. The default is None.
-
-#         Returns
-#         -------
-#         NDArray
-#             Number of planets associated with star particles.
-
-#         """
-#         stellar_ages = data["stars", "stellar_age"].value  # in Gyr
-#         masses = data["stars", "InitialMass"].to("Msun").value
-
-#         # calculate mass limits based on different effects, if mass limits are not
-#         # provided
-#         if not mass_limits:
-#             mass_limits = self.mass_limits(data)
-#         mass_limit = np.amin(mass_limits, axis=1)
-
-#         # based on mass limit, calculate number of eligable stars
-#         star_number = self.imf.number_of_stars(
-#             masses, upper_bound=mass_limit, lower_bound=lower_bound
-#         )
-
-#         # calculate number of planets by multiplying number of eligable stars with
-#         # planet occurence rate, set number of planets to 0 if stellar age is below
-#         # planet formation time
-#         planet_number = np.where(
-#             stellar_ages >= self.planet_model.planet_formation_time,
-#             self.planet_model.occurence_rate * star_number,
-#             0,
-#         )
-#         return planet_number
-
-#     def dominant_effect(
-#         self,
-#         data: ArepoHDF5Dataset | YTDataContainerDataset,
-#         mass_limits: Optional[NDArray] = None,
-#     ) -> NDArray:
-#         """
-#         Calculate the dominant effect on the number of planets based on the different
-#         mass limits and planet formation time by calculating all effects and then
-#         choosing the relevant one.
-#         Returns array with values between 0 and 3, where the number indicates the
-#         dominant effect:
-#             0: lifetime
-#             1: metallicity
-#             2: temperature cut
-#             3: planet formation time
-
-#         Parameters
-#         ----------
-#         data : : ArepoHDF5Dataset | YTDataContainerDataset
-#             The yt Dataset for the simulation.
-#         mass_limits : NDArray, optional
-#             Mass limits used to choose integration limit from. If not provided,
-#             calculated using mass_limits method. Primarely implemented as argument to
-#             avoid having to calculate values multiple times when calling
-#             number_of_planets and dominant_effect methods. The default is None.
-
-#         Returns
-#         -------
-#         dominant_eff : NDArray
-#             Array containing the dominant effect on the planet number.
-
-#         """
-#         if not mass_limits:
-#             mass_limits = self.mass_limits(data)
-#         dominant_eff = np.argmin(mass_limits, axis=1)
-
-#         # add planet formation time effect
-#         stellar_ages = data["stars", "stellar_age"].value  # in Gyr
-#         dominant_eff[stellar_ages < self.planet_model.planet_formation_time] = 3
-#         return dominant_eff
-
-#     def mass_limits(
-#         self,
-#         data: ArepoHDF5Dataset | YTDataContainerDataset,
-#     ) -> NDArray:
-#         """
-#         Calculate maximum considered stellar mass limits based the different modelled
-#         effects.
-
-#         Parameters
-#         ----------
-#         data : : ArepoHDF5Dataset | YTDataContainerDataset
-#             The yt Dataset for the simulation.
-
-#         Returns
-#         -------
-#         mass_limits : NDArray
-#             Array of mass limits (size: [number of effects, number of star
-#             particles]).
-
-#         """
-#         limit_models = [
-#             self.mass_limit_from_lifetime,
-#             self.mass_limit_from_metallicity,
-#             self.mass_limit_from_temperature,
-#         ]
-#         mass_limits = np.array([func(data) for func in limit_models]).T
-#         return mass_limits
-
-#     def mass_limit_from_lifetime(
-#         self,
-#         data: ArepoHDF5Dataset | YTDataContainerDataset,
-#     ) -> NDArray:
-#         """
-#         Calculate maximum considered stellar mass based on the lifetime of the star
-#         particles.
-
-#         Parameters
-#         ----------
-#         data : : ArepoHDF5Dataset | YTDataContainerDataset
-#             The yt Dataset for the simulation.
-
-#         Returns
-#         -------
-#         m_from_lifetime : NDArray
-#             Array of mass limits.
-
-#         """
-#         stellar_ages = data["stars", "stellar_age"].value  # in Gyr
-#         m_from_lifetime = self.stellar_model.mass_from_lifetime(stellar_ages)
-#         return m_from_lifetime
-
-#     def mass_limit_from_metallicity(
-#         self,
-#         data: ArepoHDF5Dataset | YTDataContainerDataset,
-#     ) -> NDArray:
-#         """
-#         Calculate maximum considered stellar mass based on the metallicity of the
-#         stellar particle, by comparing maximum distance at which planets can
-#         form (Johnson2012) and inner edge of planetary HZ (Kopparapu2014).
-
-#         Parameters
-#         ----------
-#         data : : ArepoHDF5Dataset | YTDataContainerDataset
-#             The yt Dataset for the simulation.
-
-#         Returns
-#         -------
-#         m_from_metallicity : NDArray
-#             Array of mass limits.
-
-#         """
-#         fe_abundance = data["stars", "[Fe/H]"]
-
-#         # calculate maximum rocky planet formation distance
-#         crit_distance = self.planet_model.critical_formation_distance(fe_abundance)
-
-#         # match maximum formation distance to inner habitable zone distance
-#         m_from_metallicity = self.stellar_model.inner_HZ_inverse(crit_distance)
-#         return m_from_metallicity
-
-#     def mass_limit_from_temperature(
-#         self,
-#         data: ArepoHDF5Dataset | YTDataContainerDataset,
-#     ) -> NDArray:
-#         """
-#         Calculate maximum considered stellar mass based on the maximum
-#         stellar temperature.
-
-#         Parameters
-#         ----------
-#         data : : ArepoHDF5Dataset | YTDataContainerDataset
-#             The yt Dataset for the simulation.
-
-#         Returns
-#         -------
-#         m_from_temp : NDArray
-#             Array of mass limits.
-
-#         """
-#         cutoff_mass = self.stellar_model.mass_from_temperature(
-#             self.planet_model.cutoff_temperature
-#         )
-#         m_from_temp = np.full_like(data["stars", "stellar_age"].value, cutoff_mass)
-#         return m_from_temp
+# result["planets_binned"] = pd.cut(result[category], bins=4)
+# sns.pairplot(result.drop(columns=category), hue="planets_binned", kind="hist")
+# sns.heatmap(result.drop(columns="planets_binned").corr(), vmax=1,
+#             square=True,annot=True)
+# and ridge plots
