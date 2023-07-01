@@ -182,7 +182,7 @@ class Systems:
         }
         self.distributions = {}
         for variable_name in self.variable_names:
-            self.distributions[variable_name] = self.truncated_gaussian(variable_name)
+            self.distributions[variable_name] = self._truncated_gaussian(variable_name)
 
         # overwrite distributions with custom distributions if given
         if isinstance(distributions, dict):
@@ -269,39 +269,98 @@ class Systems:
         bounds_dict = {
             index: (row["min"], row["max"]) for index, row in bounds.iterrows()
         }
-        return bounds_dict
+        return bounds_dict    
     
-    def variable_probabilities(self,
-                               included_variables:Optional[list[str]]=None,
-                               ) -> pd.DataFrame:
+    def sample_distribution(self, num:int, 
+                  included_variables:Optional[list[str]]=None, 
+                  ) -> pd.DataFrame:
         """
-        Calculate probablities for monte carlo variables from multivariate pdf. 
-        Additional parameter, include which distributions to include can be passed
-        to multivariate pdf using kwargs.
-        
+        Sample variable distribtuions. The parameter included_variables can be used to 
+        choose the variables.
+
         Parameters
         ----------
+        num : int
+            Number if samples.
         included_variables : Optional[list[str]], optional
             Names of variables included in the calucation. The default is None, which
             includes all variables.
-
+            
         Returns
         -------
-        pd.DataFrame
-            Dataframe with system ids and probabilities.
+        result : pd.DataFrame
+            Dataframe of samples.
 
         """
-        probabilities = pd.DataFrame()
-        probabilities.index = self.variables.index.copy()
+        if included_variables is None:
+            included_variables = self.variable_names
         
-        variables = self.variables[included_variables]
-        probabilities["probability"] = self.multivariate_pdf(variables.T,
-                                                             included_variables)
+        # choose distributions to include
+        distributions = [self.distributions[var] for var in included_variables]
         
-        return probabilities
-        
+        # sample distributions
+        result = []
+        for distribution in distributions:
+            result.append(distribution.rvs(num))
+                  
+        return pd.DataFrame(np.array(result).T, columns = included_variables) 
 
-    def truncated_gaussian(self, variable_name: str) -> rv_continuous:
+    def pdf(self, variable_values: ArrayLike, 
+                  included_variables:Optional[list[str]]=None, 
+                  multiply:bool = True) -> pd.DataFrame | NDArray:
+        """
+        Calculate the value of the pdfs. for some variable values by evaluating the 
+        individual variable distributions. If multiply is True, the results are 
+        multiplied to form the multivariate pdf (assuming independence). The parameter 
+        included_variables can be used to choose the variables.
+
+        Parameters
+        ----------
+        variable_values : ArrayLike
+            Input values for the distributions (must have same length as distributions 
+            dict).
+        included_variables : Optional[list[str]], optional
+            Names of variables included in the calucation. The default is None, which
+            includes all variables.
+        multiply : bool, optional
+            Choose if individual pdf values should be multiplied to obtain the value
+            of the multivariate pdf or not.
+            
+        Returns
+        -------
+        result : pd.DataFrame | NDArray
+            Value of pdf. If multiply is False, returns Dataframe with value for every
+            distribution. If True, return Array with product of values.
+
+        """
+        if included_variables is None:
+            included_variables = self.variable_names
+
+        variable_values = np.asarray(variable_values)
+        if variable_values.shape[-1] != len(included_variables):
+            raise ValueError("Shape of variable_values must match number of "
+                             "distributions in distribution dict (or length of "
+                             "included_variables if given).")
+        
+        
+        distributions = [self.distributions[var] for var in included_variables]
+        
+        result = []
+        for name, distribution, value in zip(included_variables,
+                                             distributions, 
+                                             variable_values):
+            result.append(distribution.pdf(value))
+        
+        result = np.array(result)
+        if result.ndim==1:
+            result = result.reshape(1, -1)
+            
+        if multiply:
+            return np.prod(result,axis=1)
+        else:
+            return pd.DataFrame(result, columns = included_variables)    
+
+    def _truncated_gaussian(self, variable_name: str) -> rv_continuous:
         """
         Create truncated Gaussian distribution for variable according to stored
         parameter.
@@ -330,47 +389,8 @@ class Systems:
         )
         return distribution
     
-    def multivariate_pdf(self, variable_values: ArrayLike, 
-                         included_variables:Optional[list[str]]=None) -> NDArray:
-        """
-        Calculate the value of the multivariate pdf for some variable values by 
-        evaluating and multiplying the individual variable distributions (i.e. assume
-        they are independent). The parameter included_variables can be used to choose
-        the variables.
 
-        Parameters
-        ----------
-        variable_values : ArrayLike
-            Input values for the distributions (must have same length as distributions 
-            dict).
-        included_variables : Optional[list[str]], optional
-            Names of variables included in the calucation. The default is None, which
-            includes all variables.
-            
-        Returns
-        -------
-        result : NDArray
-            Value of the multivariate pdf.
-
-        """
-        if included_variables is None:
-            included_variables = self.variable_names
-        
-        variable_values = np.asarray(variable_values)
-        if variable_values.shape[0] != len(included_variables):
-            raise ValueError("Shape of variable_values must match number of "
-                             "distributions in distribution dict (or length of "
-                             "included_variables if given).")
-        
-        result = 1
-        distributions = [self.distributions[var] for var in included_variables]
-        for name, distribution, value in zip(included_variables,
-                                             distributions, 
-                                             variable_values):
-            if name in included_variables:
-                result *= distribution.pdf(value)
-        return result
-
+                                
     def _load_raw_system_variables(self) -> pd.DataFrame:
         """
         Loads file with system variables provided by Emsenhuber and preprocess.
@@ -420,95 +440,52 @@ class PlanetModel:
         return population
     
     @lru_cache(maxsize=512)
-    def function(self, age, category, neighbors=5, weights="distance", **kwargs):
+    def get_planet_function(self, age, category, neighbors=3, 
+                            weights="uniform", **kwargs):
         knn = KNeighborsRegressor(n_neighbors=neighbors, weights=weights, **kwargs)
         
         population = self.get_population(age)
-        data = population.match_systems(category, 
-                                        system_dataframe=self.systems.variables)
-        func = knn.fit(data.drop(columns="Earth").to_numpy(), data["Earth"])
-        return func
+        data = population.match_dataframes(category, 
+                                           system_dataframe=self.systems.variables)
+        function = knn.fit(data.drop(columns=category), data[category])
+        return function
     
-    @lru_cache(maxsize=512)
-    def create_(self, age, category, **kwargs):
-        func = self.function(age, category, **kwargs)
-        multi_pdf = self.systems.multivariate_pdf
+    def prediction(self, variables, age, category, return_full=False, **kwargs):
+        sample = self.systems.sample_distribution(variables.shape[0])
         
-        def prod(variable_values):
-            variable_values = np.asarray(variable_values)
-            if variable_values.ndim==1:
-                variable_values = variable_values.reshape(1, -1)
-            
-            return func.predict(variable_values) * multi_pdf(variable_values.T)
+        for column in variables.columns:
+            sample[column] = variables[column]
         
-        return prod
+        knn = self.get_planet_function(age, category, **kwargs)
+        
+        sample[category] = knn.predict(sample)
+        
+        if return_full:
+            return sample
+        else:
+            return sample[category]
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 category = "Earth"
 pop_id = "ng76"
+samples = int(1e+6)
 
-l = Population(pop_id, int(1e+10))
-o = Systems(pop_id)
-bounds = list(o.variable_bounds().values())      
+model = PlanetModel(pop_id)
 
-pdf_vals = o.variable_probabilities(included_variables=['log_initial_mass', 
-                                                        'log_inner_edge', 
-                                                        'log_photoevaporation'])
-func_vals = l.match_dataframes(category, pdf_vals).prod(axis=1) # product of number of planets and pdf
+variable = pd.DataFrame(np.linspace(*model.systems.bounds["[Fe/H]"], samples), 
+                        columns=["[Fe/H]"])
 
-def create_mgrid(bounds, num_points):
-    """Create a meshgrid from a list of bounds and calculate volume of a grid cell.
-    Each grid point is at the center of the cell. 
-    num_points is a list specifying number of points per dimension.
-    """
-    if isinstance(num_points, int):
-        num_points = [num_points] * len(bounds)
-
-    # Calculate the step size for each dimension
-    steps = [(stop - start) / n for (start, stop), n in zip(bounds, num_points)]
-
-    # Adjust the bounds so the points are in the center of the cells
-    axes = [np.linspace(start + step / 2, stop - step / 2, n) 
-            for (start, stop), step, n in zip(bounds, steps, num_points)]
-    
-    meshgrid = np.meshgrid(*axes, indexing='ij')
-
-    # Calculate volume of a grid cell
-    cell_volume = np.prod(steps)
-
-    return meshgrid, cell_volume
+result = model.prediction(variable, int(1e+10), category, return_full=True)
 
 
+result['planets_binned'] = pd.cut(result[category], bins=4)
 
-mgrid, cell_volume = create_mgrid(bounds, num_points=[50,50,50,50])
-df = pd.DataFrame(np.column_stack([grid.ravel() for grid in mgrid]),
-                           columns=o.variable_names)
-
-knn = KNeighborsRegressor(n_neighbors=3, weights="distance")
+sns.pairplot(result.drop(columns=category), 
+            hue='planets_binned', kind='hist')
 
 
-e = l.match_dataframes(category, o.variables)
-
-func = knn.fit(o.variables[o.variables.index.isin(func_vals.index)],
-              func_vals)
-
-# Predict the output for each grid point
-df[category] = func.predict(df)
-df['planets_binned'] = pd.cut(df[category], bins=4)
-sns.pairplot(e, hue=category, kind='hist')
-sns.pairplot(df.drop(columns=category).sample(5000), hue='planets_binned', kind='hist')
-
-
-#func = knn.fit(e.drop(columns=category),e[category])
-#df[category] = df[category].round().astype(int)
-#sns.pairplot(e, hue=category, kind='hist')
-#sns.pairplot(df.sample(5000), hue=category, kind='hist')
-
-
-# Reshape the predictions to have the same shape as the input grid
-#predictions_grid = predictions.reshape(mgrid[0].shape)
 
 
 
