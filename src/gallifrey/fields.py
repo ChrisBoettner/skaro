@@ -7,6 +7,7 @@ Created on Thu Mar  9 13:10:14 2023
 """
 
 from typing import Optional
+import pandas as pd
 
 import numpy as np
 from astropy.cosmology import Planck15
@@ -16,7 +17,7 @@ from yt.fields.field_detector import FieldDetector
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
-from gallifrey.planets import PlanetModel, PlanetOccurenceModel
+from gallifrey.planets import PlanetModel
 from gallifrey.stars import ChabrierIMF, StellarModel
 from gallifrey.utilities.logging import logger
 
@@ -90,48 +91,45 @@ class Fields:
 
     def add_planets(
         self,
-        stellar_model: StellarModel,
+        category: str,
         planet_model: PlanetModel,
         imf: ChabrierIMF,
-        lower_bound: float = 0.08,
+        imf_bounds: tuple = (1, 1.04),
+        reference_age: Optional[int] = int(1e+8),
+        age_limits: float = (0.02, 10),
     ) -> None:
-        """
-        Add (number of) planet and field to star particles. Also adds planet_effect
-        field that encodes the dominant effect on the planet number.
-
-        Parameters
-        ----------
-        stellar_model : StellarModel
-            Stellar model that connects mass to other stellar parameter.
-        planet_model : PlanetModel
-            Planet model that contains relevant planet parameter.
-        imf : ChabrierIMF
-            Stellar initial mass function of the star particles.
-        lower_bound : float, optional
-            Lower bound for the integration of the Chabrier IMF. The default is 0.08.
-
-        """
         self.check_star_properties()
 
-        planets_occ_model = PlanetOccurenceModel(stellar_model, planet_model, imf)
-
         def _planets(field: DerivedField, data: FieldDetector) -> NDArray:
-            return planets_occ_model.number_of_planets(data, lower_bound=lower_bound)
+            stellar_ages = data["stars", "stellar_age"].value
+            metallicities = data["stars", "[Fe/H]"].value
+
+            particle_masses = data["stars", "InitialMass"].to("Msun").value
+            number_of_stars = imf.number_of_stars(particle_masses, *imf_bounds)
+            
+            if reference_age is None:
+                ages = stellar_ages * 1e9
+            elif isinstance(reference_age, int):
+                ages = np.repeat(reference_age, len(stellar_ages))
+            else:
+                raise ValueError("reference_age must be int or None.")
+            
+            variables_dataframe = pd.DataFrame(
+                np.array([ages, metallicities]).T,
+                columns=["age", "[Fe/H]"],
+            )
+
+            # calculate planets per star using KNN interpolation of NGPPS results
+            planets_per_star = planet_model.prediction(category, variables_dataframe)
+            # exclude systems still in formation stage
+            planets_per_star[stellar_ages < age_limits[0]] = 0
+            # exclude systems where star has gone off main sequence
+            planets_per_star[stellar_ages > age_limits[1]] = 0
+            return planets_per_star.to_numpy()[:, 0] * number_of_stars
 
         self.ds.add_field(
             ("stars", "planets"),
             function=_planets,
-            sampling_type="local",
-            units="auto",
-            dimensions=1,
-        )
-
-        def _planets_effect(field: DerivedField, data: FieldDetector) -> NDArray:
-            return planets_occ_model.dominant_effect(data)
-
-        self.ds.add_field(
-            ("stars", "planet_effects"),
-            function=_planets_effect,
             sampling_type="local",
             units="auto",
             dimensions=1,
@@ -198,7 +196,7 @@ class Fields:
             fe_fraction[fe_fraction < 0] = 0  # some values are < 0
             log_fe_fraction = np.where(
                 fe_fraction > 0, np.ma.log10(fe_fraction), -3
-            )  # set those values to -100
+            )  # set those values to -3
 
             # normalise to stellar fraction
             fe_abundance = log_fe_fraction - log_solar_fe_fraction
@@ -254,7 +252,6 @@ class Fields:
         formation_time = data.ds.arr(
             np.interp(formation_redshift, redshift_grid, time_grid), "Gyr"
         )
-
         return current_time - formation_time
 
     def check_star_properties(self) -> None:
