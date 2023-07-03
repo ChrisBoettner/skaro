@@ -454,11 +454,11 @@ class PlanetModel:
         self.category_dict = {
             "Dwarf": lambda row: row["total_mass"] < 0.5,
             "Earth": lambda row: 0.5 <= row["total_mass"] < 2,
-            "SuperEarth": lambda row: 2 <= row["total_mass"] < 10,
+            "Super-Earth": lambda row: 2 <= row["total_mass"] < 10,
             "Neptunian": lambda row: 10 <= row["total_mass"] < 30,
-            "SubGiant": lambda row: 30 <= row["total_mass"] < 300,
+            "Sub-Giant": lambda row: 30 <= row["total_mass"] < 300,
             "Giant": lambda row: 300 <= row["total_mass"],
-            "DBurning": lambda row: 4322 <= row["total_mass"],
+            "D-Burner": lambda row: 4322 <= row["total_mass"],
         }
         self.categories = list(self.category_dict.keys())
 
@@ -548,8 +548,13 @@ class PlanetModel:
         scaler = StandardScaler()
         input_data = data.drop(columns=category)
         data_scaled = pd.DataFrame(
-            scaler.fit_transform(input_data), columns=input_data.columns
+            scaler.fit_transform(input_data),
+            columns=input_data.columns,
+            index=input_data.index,
         )
+
+        # save the features seen during training
+        self.features = input_data.columns
 
         # fit and return the KNN regressor with the data
         fitted_knn = knn.fit(data_scaled, data[category])
@@ -585,7 +590,7 @@ class PlanetModel:
         return_full : bool, optional
             If True, return the full DataFrame (variables + prediction). Otherwise,
             return only the category column (i.e. the prediction).
-        kwargs : dict
+        kwargs : Any
             Additional arguments to pass to the get_planet_function method.
 
         Returns
@@ -622,7 +627,9 @@ class PlanetModel:
         for category in categories:
             knn, scaler = self.get_planet_function(category, ages=ages, **kwargs)
             # scale data with same scaler used for fitting KNN
-            data_scaled = pd.DataFrame(scaler.transform(sample), columns=sample.columns)
+            data_scaled = pd.DataFrame(
+                scaler.transform(sample), columns=sample.columns, index=variables.index
+            )
             prediction_dataframe[category] = knn.predict(data_scaled)
 
         if return_full:
@@ -635,29 +642,45 @@ if __name__ == "__main__":
     # import matplotlib.pyplot as plt
     import seaborn as sns
 
-    category = "Earth"
     pop_id = "ng75"
     samples = int(1e5)
 
     model = PlanetModel(pop_id)
+    # category =  "Earth"
 
-    variables = pd.DataFrame(
-        np.linspace(*model.systems.bounds["[Fe/H]"], samples), columns=["[Fe/H]"]
+    # variables = pd.DataFrame(
+    #     np.linspace(*model.systems.bounds["[Fe/H]"], samples), columns=["[Fe/H]"]
+    # )
+    # variables["age"] = int(1e9)
+    # result = model.prediction(category, variables, return_full=True)
+
+    # result["planets_binned"] = pd.cut(result[category], bins=4)
+    # sns.pairplot(
+    #    result.drop(columns=["age", category]), hue="planets_binned", kind="hist"
+    # )
+
+    #####
+    categories = [
+        category
+        for category in model.categories
+        if category not in ["Dwarf", "D-Burner"]
+    ]
+    original_variables = model.systems.variables.reset_index(drop=True)
+    original_variables["age"] = int(1e8)
+    original_sample = model.prediction(
+        categories, original_variables, return_full=True, neighbors=1
     )
 
-    variables["age"] = int(1e9)
-
-    result = model.prediction(category, variables, return_full=True)
-
-    result["planets_binned"] = pd.cut(result[category], bins=4)
-
-    sns.pairplot(
-        result.drop(columns=["age", category]), hue="planets_binned", kind="hist"
+    corr_matrix = original_sample.corr(method="kendall").drop(
+        columns=model.features, index=["age", *categories]
     )
-# sns.heatmap(result.drop(columns=["age", "planets_binned"]).corr(), vmax=1,
-#             square=True,annot=True)
-# and ridge plots
+    sns.heatmap(corr_matrix, vmin=-1, vmax=1, square=True, annot=True, cmap="vlag")
 
-print("TODO:")
-# adjust setup.py in notebooks to work with new function
+    # and ridge plots
+
+print("TODO: planets.py")
+print("INSTALL MAMBA")
+# make a new file where you just analyse original NGPPS sample, including
+# correlation heatmap, etc. Needed to interpret galaxy results
+# -> strongest correlation with initial disk mass, check that out further
 # !remember that some metallicities are far outside NGPPS bounds

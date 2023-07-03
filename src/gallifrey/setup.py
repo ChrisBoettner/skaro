@@ -30,6 +30,7 @@ def data_setup(
     resolution: int = 4096,
     sim_id: str = "09_18",
     ngpps_id: str = "ng75",
+    imf_bounds: tuple[float, float] = (1, 1.04),
     planet_params: Optional[dict[str, Any]] = None,
 ) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel]:
     """
@@ -48,6 +49,9 @@ def data_setup(
     ngpps_id : str, optional
         ID of the NGPPS population synthesis run for the planet model. The default is
         "ng75", which is a solar-like star with 50 embryos.
+        imf_bounds : tuple[float, float], optional
+            The range over with to integrate the imf. Corresponds to the mass range
+            of stars considered. The default is (1, 1.04).
     planet_params: dict[str, Any], optional
         Additional parameter passed to fields.add_planets
 
@@ -66,7 +70,7 @@ def data_setup(
 
     """
     # %%
-    with Timer("Loading Hestia Snapshot.."):
+    with Timer("Loading Hestia Snapshot..."):
         ds = load_snapshot(snapshot, resolution)
         mw = MainHalo("MW", resolution, ds, sim_id=sim_id)
 
@@ -74,26 +78,28 @@ def data_setup(
         fields = Fields(ds)
 
     # %%
-    with Timer("Adding Stars.."):
+    with Timer("Adding Stars..."):
         stellar_model = StellarModel()
         imf = ChabrierIMF()
 
         filters.add_stars()
         fields.convert_star_properties()
 
-        fields.add_main_sequence_stars(stellar_model, imf)
+        fields.add_number_of_stars(imf, imf_bounds=imf_bounds)
         fields.add_iron_abundance()
 
     # %%
-    with Timer("Adding Planets.."):
+    with Timer("Adding Planets..."):
         if planet_params is None:
             planet_params = {}
 
         planet_model = PlanetModel(ngpps_id)
         for category in planet_model.categories:
-            fields.add_planets(category, planet_model, imf, **planet_params)
+            fields.add_planets(
+                category, planet_model, imf, imf_bounds=imf_bounds, **planet_params
+            )
 
-    with Timer("Other calculations.."):
+    with Timer("Other Calculations..."):
         mw.insert(
             "BULGE_END",
             5,

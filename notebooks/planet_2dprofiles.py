@@ -83,7 +83,12 @@ def generate_plots(
 
 
 def plot_2dprofiles(
-    ds, quantity, bins=[200, 200], save=False, no_dwarfs=False, zlims=None,
+    ds,
+    quantity,
+    bins=[200, 200],
+    save=False,
+    no_dwarfs=False,
+    zlims=None,
 ):
     """Generate 2D plots for the given quantity."""
     if zlims is None:

@@ -64,7 +64,7 @@ def plot_maps(ds, axis="z", save=False, no_dwarfs=False, zlims=None, **kwargs):
     if zlims is None:
         zlims = {}  # if no zlims provided, initialize as an empty dict
 
-    total_planet = plot_planets = plot_and_show(
+    plot_planets = plot_and_show(
         ds,
         fields=[("stars", "planets")],
         axis=axis,
@@ -79,7 +79,7 @@ def plot_maps(ds, axis="z", save=False, no_dwarfs=False, zlims=None, **kwargs):
         **kwargs,
     )
 
-    relative_planet = plots_weighted_planets = plot_and_show(
+    plots_weighted_planets = plot_and_show(
         ds,
         fields=[("stars", "mass_weighted_planets"), ("stars", "star_weighted_planets")],
         axis=axis,
@@ -108,7 +108,7 @@ def plot_maps(ds, axis="z", save=False, no_dwarfs=False, zlims=None, **kwargs):
         figs = flatten_list(
             [
                 [pl.figure for pl in list(plot.plots.values())]
-                for plot in [total_planet, relative_planet]
+                for plot in [plot_planets, plots_weighted_planets]
             ]
         )
         names = ["planets", "sw_planets", "mw_planets", "cummulative_planets"]

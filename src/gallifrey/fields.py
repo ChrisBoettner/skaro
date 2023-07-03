@@ -18,7 +18,7 @@ from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
 from gallifrey.planets import PlanetModel
-from gallifrey.stars import ChabrierIMF, StellarModel
+from gallifrey.stars import ChabrierIMF
 from gallifrey.utilities.logging import logger
 
 # create Logger
@@ -168,41 +168,32 @@ class Fields:
             dimensions=1,
         )
 
-    def add_main_sequence_stars(
+    def add_number_of_stars(
         self,
-        stellar_model: StellarModel,
         imf: ChabrierIMF,
-        lower_bound: float = 0.08,
-        temperature_limit: Optional[int] = None,
+        imf_bounds: tuple[float, float] = (1, 1.04),
     ) -> None:
         """
-        Add (number of) main sequence star field to star particles.
+        Add (number of) stars field to star particles.
 
         Parameters
         ----------
-        stellar_model : StellarModel
-            Stellar model that connects mass to other stellar parameter.
         imf : ChabrierIMF
             Stellar initial mass function of the star particles.
-        lower_bound : float, optional
-            Lower bound for the integration of the Chabrier IMF. The default is 0.08.
-        temperature_limit: Optional[int], optional
-            Upper integration bound from maximum planet temperature (in K). The default
-            is None, ignoring this effect.
+        imf_bounds : tuple[float, float], optional
+            The range over with to integrate the imf. Corresponds to the mass range
+            of stars considered. The default is (1, 1.04).
         """
 
         self.check_star_properties()
 
         def _star_number(field: DerivedField, data: FieldDetector) -> NDArray:
-            masses = data["stars", "InitialMass"].to("Msun").value
-            upper_bound = stellar_model.mass_from_lifetime(data["stars", "stellar_age"])
-            if temperature_limit is not None:
-                m_temperature = stellar_model.mass_from_temperature(temperature_limit)
-                upper_bound[upper_bound > m_temperature] = m_temperature
-            return imf.number_of_stars(masses, lower_bound, upper_bound)
+            particle_masses = data["stars", "InitialMass"].to("Msun").value
+            number_of_stars = imf.number_of_stars(particle_masses, *imf_bounds)
+            return self.ds.arr(number_of_stars, "1")
 
         self.ds.add_field(
-            ("stars", "main_sequence_stars"),
+            ("stars", "number"),
             function=_star_number,
             sampling_type="local",
             units="auto",
