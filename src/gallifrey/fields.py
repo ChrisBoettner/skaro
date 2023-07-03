@@ -7,9 +7,9 @@ Created on Thu Mar  9 13:10:14 2023
 """
 
 from typing import Optional
-import pandas as pd
 
 import numpy as np
+import pandas as pd
 from astropy.cosmology import Planck15
 from numpy.typing import NDArray
 from yt.fields.derived_field import DerivedField
@@ -94,26 +94,56 @@ class Fields:
         category: str,
         planet_model: PlanetModel,
         imf: ChabrierIMF,
-        imf_bounds: tuple = (1, 1.04),
-        reference_age: Optional[int] = int(1e+8),
-        age_limits: float = (0.02, 10),
+        imf_bounds: tuple[float, float] = (1, 1.04),
+        reference_age: Optional[int] = 100000000,
+        age_limits: tuple[float, float] = (0.02, 10),
     ) -> None:
+        """
+        Add number of planets of a given category associated with the star particle.
+        This is done by calculating the number of planets per star using the
+        NGPPS population model and then multiplying by the number of stars in the
+        considered range.
+
+        Parameters
+        ----------
+        category : str
+            The category of planets to consider, e.g. "Earth", "Giant", etc. Find
+            list of available categories in planet_model.population class.
+        planet_model : PlanetModel
+            The planet model that associates a stellar particle properties
+            with number of planets (of a given class).
+        imf : ChabrierIMF
+            Stellar initial mass function of the star particles..
+        imf_bounds : tuple[float, float], optional
+            The range over with to integrate the imf. Corresponds to the mass range
+            of stars considered. The default is (1, 1.04).
+        reference_age : Optional[int], optional
+            The age at which to evaluate the planet population model. The default is
+            int(1e+8), i.e. 100Myr. If the value is None, the age of the star particle
+            is used. (This is much slower and memory intensive.)
+        age_limits : tuple[float, float], optional
+            Age range to consider for star particle. The default is (0.02, 10).
+
+        """
+        # check if star properties are correctly set
         self.check_star_properties()
 
         def _planets(field: DerivedField, data: FieldDetector) -> NDArray:
             stellar_ages = data["stars", "stellar_age"].value
-            metallicities = data["stars", "[Fe/H]"].value
+            metallicities = data["stars", "[Fe/H]"]
 
             particle_masses = data["stars", "InitialMass"].to("Msun").value
             number_of_stars = imf.number_of_stars(particle_masses, *imf_bounds)
-            
+
+            # choose what age to associate with star particles
             if reference_age is None:
                 ages = stellar_ages * 1e9
             elif isinstance(reference_age, int):
                 ages = np.repeat(reference_age, len(stellar_ages))
             else:
                 raise ValueError("reference_age must be int or None.")
-            
+
+            # create dataframe from relevant quantities
             variables_dataframe = pd.DataFrame(
                 np.array([ages, metallicities]).T,
                 columns=["age", "[Fe/H]"],
@@ -125,10 +155,13 @@ class Fields:
             planets_per_star[stellar_ages < age_limits[0]] = 0
             # exclude systems where star has gone off main sequence
             planets_per_star[stellar_ages > age_limits[1]] = 0
-            return planets_per_star.to_numpy()[:, 0] * number_of_stars
+
+            # calculate total number of planets
+            planets = planets_per_star.to_numpy()[:, 0] * number_of_stars
+            return self.ds.arr(planets, "1")
 
         self.ds.add_field(
-            ("stars", "planets"),
+            ("stars", category),
             function=_planets,
             sampling_type="local",
             units="auto",
@@ -200,7 +233,7 @@ class Fields:
 
             # normalise to stellar fraction
             fe_abundance = log_fe_fraction - log_solar_fe_fraction
-            return fe_abundance
+            return self.ds.arr(fe_abundance, "1")
 
         self.ds.add_field(
             ("stars", "[Fe/H]"),

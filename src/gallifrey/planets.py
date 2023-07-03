@@ -13,6 +13,7 @@ import pandas as pd
 from numpy.typing import ArrayLike, NDArray
 from scipy.stats import rv_continuous, truncnorm
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
 
 from gallifrey.data.paths import Path
 from gallifrey.utilities.structures import find_closest
@@ -24,9 +25,12 @@ class Population:
 
     """
 
-    def __init__(self, population_id: str, age: int) -> None:
+    def __init__(
+        self, population_id: str, age: int, category_dict: dict[str, Callable]
+    ) -> None:
         """
-        Initialize object, load dataframe and add planet categories.
+        Initialize object, load dataframe with population data
+        and add planet category flags based on category_dict.
 
         Parameters
         ----------
@@ -34,6 +38,10 @@ class Population:
             Name of the population run.
         age : int
             Age of system at time of snapshot.
+        category_dict: dict[str, Callable]
+            Dictonary that contains the names of the categories, and a function
+            how to assign a given category to a row in the population dataframe based
+            on the values in the row.
 
         """
         # load populations
@@ -41,21 +49,9 @@ class Population:
             Path().raw_data(f"NGPPS/{population_id}/snapshot_{age}.csv")
         )
 
-        # add planet categories
-        self.category_dict = {
-            "Dwarf": lambda row: row["total_mass"] < 0.5,
-            "Earth": lambda row: 0.5 <= row["total_mass"] < 2,
-            "SuperEarth": lambda row: 2 <= row["total_mass"] < 10,
-            "Neptunian": lambda row: 10 <= row["total_mass"] < 30,
-            "SubGiant": lambda row: 30 <= row["total_mass"] < 300,
-            "Giant": lambda row: 300 <= row["total_mass"],
-            "DBurning": lambda row: 4322 <= row["total_mass"],
-        }
-        self.categories = list(self.category_dict.keys())
-
         # add planet flags and number of planets dataframe
-        self.add_category_flags()
-        self.planet_number = self.count_planets()
+        self.add_category_flags(category_dict)
+        self.planet_number = self.count_planets(list(category_dict.keys()))
 
     def match_dataframes(
         self,
@@ -100,20 +96,32 @@ class Population:
         )
         return matched_dataframe
 
-    def add_category_flags(self) -> None:
+    def add_category_flags(self, category_dict: dict[str, Callable]) -> None:
         """
         Adds planet categories to columns.
 
+        Parameters
+        ----------
+        category_dict: dict[str, Callable]
+            Dictonary that contains the names of the categories, and a function
+            how to assign a given category to a row in the population dataframe based
+            on the values in the row.
+
         """
         # Apply each function to the DataFrame to create new columns
-        for category, condition in self.category_dict.items():
+        for category, condition in category_dict.items():
             self.population[category] = self.population.apply(condition, axis=1)
 
-    def count_planets(self) -> pd.DataFrame:
+    def count_planets(self, categories: list[str]) -> pd.DataFrame:
         """
         Count the number of planets for each planet category by grouping the dataframe
         based on the system_id and then summing over the number of True values for a
         given category.
+
+        Parameters
+        ----------
+        categories: list[str]
+            List of considered categories for which to count the planet number.
 
         Returns
         -------
@@ -122,7 +130,7 @@ class Population:
             that system.
 
         """
-        planet_number = self.population.groupby("system_id")[self.categories].sum()
+        planet_number = self.population.groupby("system_id")[categories].sum()
         return planet_number.astype(int)
 
 
@@ -429,8 +437,10 @@ class PlanetModel:
         population_id : str
             Name of the population run.
         """
-        # code to generate all the avaiable snapshot ages
-        self.available_ages = np.array(
+        # available snapshot ages (code to generate them so that get_snapshot_ages()
+        # from dace module doesn't have to be run, and there is no huge list here. Might
+        # lead to errors if snapshot ages change for a different population run)
+        self.available_ages = tuple(
             [
                 int(j * (10**i))
                 for i in range(5, 11)
@@ -439,6 +449,19 @@ class PlanetModel:
         )
 
         self.population_id = population_id
+
+        # define planet categories
+        self.category_dict = {
+            "Dwarf": lambda row: row["total_mass"] < 0.5,
+            "Earth": lambda row: 0.5 <= row["total_mass"] < 2,
+            "SuperEarth": lambda row: 2 <= row["total_mass"] < 10,
+            "Neptunian": lambda row: 10 <= row["total_mass"] < 30,
+            "SubGiant": lambda row: 30 <= row["total_mass"] < 300,
+            "Giant": lambda row: 300 <= row["total_mass"],
+            "DBurning": lambda row: 4322 <= row["total_mass"],
+        }
+        self.categories = list(self.category_dict.keys())
+
         # load systems information
         self.systems = Systems(self.population_id)
 
@@ -459,29 +482,27 @@ class PlanetModel:
         """
         if age not in self.available_ages:
             raise ValueError("Age does not match any snapshot.")
-        return Population(self.population_id, age)
+        return Population(self.population_id, age, self.category_dict)
 
     @methodtools.lru_cache(maxsize=512)
     def get_planet_function(
         self,
         category: str,
-        ages: Optional[tuple[int] | int] = None,
+        ages: Optional[tuple[int, ...] | int] = None,
         neighbors: int = 3,
         weights: str = "uniform",
         **kwargs: Any,
-    ) -> KNeighborsRegressor:
+    ) -> tuple[KNeighborsRegressor, StandardScaler]:
         """
-        Calculate KNN interpolation for a population snapshot
-        for a given age and category.
+        Calculate KNN interpolation for a population snapshot for a given category.
 
         Parameters
         ----------
         category: str
             Category that is matched to system variables.
-        ages : Optional[list[int] | int], optional
+        ages : Optional[tuple[int, ...]] | int], optional
             A list of snapshot ages to include in the interpolation. The default is
-            None, which includes every other age found in available_ages attribute that
-            are larger than 20Myr.
+            None, which includes every age found in available_ages.
         neighbors : int, optional
             Number of neighbors to use in the KNN regression. The default is 3.
         weights : str, optional
@@ -494,12 +515,21 @@ class PlanetModel:
         ----------
         KNeighborsRegressor
             KNeighborsRegressor model fitted on the population data.
+        StandardScaler
+            Gaussian scaler used to scale the data before fitting, scaler needs to
+            be applied to any dataset before calling knn.predict.
+
         """
-        if ages is None:
-            ages = self.available_ages
-        elif isinstance(ages, int):
-            ages = (ages)
-        
+        match ages:
+            case None:
+                ages = self.available_ages
+            case int():
+                ages = (ages,)
+            case tuple():
+                ages = ages
+            case _:
+                raise ValueError("ages must be None, int or tuple[int]")
+
         # gather data for considered snapshots
         datasets = []
         for age in ages:
@@ -510,16 +540,26 @@ class PlanetModel:
             data["age"] = age
             datasets.append(data)
         data = pd.concat(datasets)
-        
-        # Fit the KNN regressor with the data
+
+        # define KNN regressor
         knn = KNeighborsRegressor(n_neighbors=neighbors, weights=weights, **kwargs)
-        return knn.fit(data.drop(columns=category), data[category])
+
+        # scale input data before passing it to the regressor
+        scaler = StandardScaler()
+        input_data = data.drop(columns=category)
+        data_scaled = pd.DataFrame(
+            scaler.fit_transform(input_data), columns=input_data.columns
+        )
+
+        # fit and return the KNN regressor with the data
+        fitted_knn = knn.fit(data_scaled, data[category])
+        return fitted_knn, scaler
 
     def prediction(
         self,
         categories: str | list,
         variables: pd.DataFrame,
-        ages: Optional[tuple[int] | int] = None,
+        ages: Optional[tuple[int, ...] | int] = None,
         return_full: bool = False,
         **kwargs: Any,
     ) -> pd.DataFrame:
@@ -527,9 +567,9 @@ class PlanetModel:
         Predict a number of planets in a given category given some input system
         variable using the KNN regressor. Variables that are not directly passed are
         sampled from systems variable distributions, meaning the output is stochastic.
-        
-        IMPORTANT: The KNN regressor considers monte carlo variables as well as 
-        snapshot/system age, but since no distribution for ages is given, the 
+
+        IMPORTANT: The KNN regressor considers monte carlo variables as well as
+        snapshot/system age, but since no distribution for ages is given, the
         'variables' dataframe needs to contain a column 'ages'.
 
         Parameters
@@ -538,7 +578,7 @@ class PlanetModel:
             Category that is matched to system variables.
         variables : pd.DataFrame
             DataFrame of variables to be used in the prediction.
-        ages : Optional[tuple[int] | int], optional
+        ages : Optional[tuple[int, ...]] | int], optional
             A list of snapshot ages to include in the interpolation. The default is
             None, in that case the relevant ages are inferred from the age column
             of the variables dataframe.
@@ -553,10 +593,15 @@ class PlanetModel:
         pd.DataFrame
             The predicted values as dataframe. If return_full=True, this includes
             the sample of variables used for the calculation.
+
         """
         if isinstance(categories, str):
             categories = [categories]
-            
+        elif isinstance(categories, list):
+            pass
+        else:
+            raise ValueError("categories must be str or list of strings.")
+
         if "age" not in variables.columns:
             raise ValueError("variables dataframe needs to contain column 'ages'.")
 
@@ -566,52 +611,53 @@ class PlanetModel:
         # Replace sample variables with the passed variables
         for column in variables.columns:
             sample[column] = variables[column]
-            
+
         # find relevant snapshot ages to be passed to get_planet_function,
         # saves a lot of time if ages are all the same or similar
         if ages is None:
-            ages = np.unique(find_closest(sample["age"], self.available_ages))
+            ages = tuple(np.unique(find_closest(sample["age"], self.available_ages)))
 
         # Get the KNN model and predict the category
         prediction_dataframe = sample.copy()
         for category in categories:
-            knn = self.get_planet_function(category, ages=tuple(ages),
-                                           **kwargs)
-            prediction_dataframe[category] = knn.predict(sample)
+            knn, scaler = self.get_planet_function(category, ages=ages, **kwargs)
+            # scale data with same scaler used for fitting KNN
+            data_scaled = pd.DataFrame(scaler.transform(sample), columns=sample.columns)
+            prediction_dataframe[category] = knn.predict(data_scaled)
 
         if return_full:
             return prediction_dataframe
         else:
             return prediction_dataframe[categories]
 
-if __name__=="__main__":
 
-    import matplotlib.pyplot as plt
+if __name__ == "__main__":
+    # import matplotlib.pyplot as plt
     import seaborn as sns
-    
+
     category = "Earth"
     pop_id = "ng75"
     samples = int(1e5)
-    
+
     model = PlanetModel(pop_id)
-    
-    variables = pd.DataFrame(np.linspace(*model.systems.bounds["[Fe/H]"], samples),
-                             columns=["[Fe/H]"])
-    
-    variables["age"] = int(1e+9)
-    
+
+    variables = pd.DataFrame(
+        np.linspace(*model.systems.bounds["[Fe/H]"], samples), columns=["[Fe/H]"]
+    )
+
+    variables["age"] = int(1e9)
+
     result = model.prediction(category, variables, return_full=True)
 
-    result["planets_binned"] = pd.cut(result[category], bins=5)
-    
-# sns.pairplot(result.drop(columns=["age", category]), hue="planets_binned", kind="hist")
+    result["planets_binned"] = pd.cut(result[category], bins=4)
+
+    sns.pairplot(
+        result.drop(columns=["age", category]), hue="planets_binned", kind="hist"
+    )
 # sns.heatmap(result.drop(columns=["age", "planets_binned"]).corr(), vmax=1,
 #             square=True,annot=True)
 # and ridge plots
 
 print("TODO:")
-# check and understand if and how interpolation works
-# clean up planets implementation in field plot
 # adjust setup.py in notebooks to work with new function
 # !remember that some metallicities are far outside NGPPS bounds
-

@@ -6,12 +6,13 @@ Created on Mon Jun  5 11:58:51 2023
 @author: chris
 """
 
-
 def data_setup(
     snapshot: int = 127,
     resolution: int = 4096,
     sim_id: str = "09_18",
+    ngpps_id: str = "ng75",
     include_dwarfs=True,
+    **kwargs,
 ):
     # %%
     # load local version before pip installed version, for debugging
@@ -56,17 +57,11 @@ def data_setup(
 
     # %%
     with Timer("planets"):
-        planet_model = PlanetModel()
-        if include_dwarfs:
-            lower_bound = 0.08
-            logger.info(f"M dwarfs included: lower_bound = {lower_bound}.")
-        else:
-            lower_bound = 0.6
-            logger.info(f"No M dwarfs: lower_bound = {lower_bound}.")
-        fields.add_planets(stellar_model, planet_model, imf, lower_bound=lower_bound)
+        planet_model = PlanetModel(ngpps_id)
+        for category in planet_model.categories:
+            fields.add_planets(category, planet_model, imf, **kwargs)
 
     with Timer("other"):
-        filters.add_old_stars()
         mw.insert(
             "BULGE_END",
             5,
