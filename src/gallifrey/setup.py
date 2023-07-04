@@ -30,6 +30,7 @@ def data_setup(
     resolution: int = 4096,
     sim_id: str = "09_18",
     ngpps_id: str = "ng75",
+    lower_stellar_age_bound: float = 0.02,
     imf_bounds: tuple[float, float] = (1, 1.04),
     planet_params: Optional[dict[str, Any]] = None,
 ) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel]:
@@ -49,9 +50,16 @@ def data_setup(
     ngpps_id : str, optional
         ID of the NGPPS population synthesis run for the planet model. The default is
         "ng75", which is a solar-like star with 50 embryos.
-        imf_bounds : tuple[float, float], optional
-            The range over with to integrate the imf. Corresponds to the mass range
-            of stars considered. The default is (1, 1.04).
+    star_age_bounds : tuple[float, float], optional
+        The age range for star particles to be considered in the add_stars
+        command. The default is (0.02, 10).
+    imf_bounds : tuple[float, float], optional
+        The range over with to integrate the imf. Corresponds to the mass range
+        of stars considered. The default is (1, 1.04).
+    lower_stellar_age_bound: float, optional
+        Lower age of star particles considered. The upper end is inferred based on the
+        stellar model and upper IMF bound. The default is 0.02, i.e. 20Myr, the planet
+        formation time in the NGPPS model.
     planet_params: dict[str, Any], optional
         Additional parameter passed to fields.add_planets
 
@@ -82,8 +90,17 @@ def data_setup(
         stellar_model = StellarModel()
         imf = ChabrierIMF()
 
-        filters.add_stars()
-        fields.convert_star_properties()
+        # create upper bound for star particle ages considered, based on lower IMF limit
+        upper_stellar_age_bound = stellar_model.lifetime(imf_bounds[0])
+        star_age_bounds = (lower_stellar_age_bound, upper_stellar_age_bound)
+
+        logger.info(
+            "STARS: 'stars' field derives from PartType4 field in age range: "
+            f"{[round(bound, 2) for bound in star_age_bounds]}."
+        )
+
+        fields.convert_PartType4_properties()
+        filters.add_stars(age_limits=star_age_bounds)
 
         fields.add_number_of_stars(imf, imf_bounds=imf_bounds)
         fields.add_iron_abundance()

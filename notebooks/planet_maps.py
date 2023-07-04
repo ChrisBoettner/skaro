@@ -7,9 +7,9 @@ Created on Fri Jun  9 13:21:08 2023
 """
 import numpy as np
 import yt
-import matplotlib.pyplot as plt
 
 from gallifrey.data.paths import Path
+
 
 def plot_maps(planet_categories, data, normal="z", plot_width=(42, "kpc"), 
                 cmap="kelp", figsize=(18.5, 10.5), subplot_columns= 3, 

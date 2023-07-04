@@ -43,24 +43,20 @@ class Fields:
             False  # flag if star_properties method was executed.
         )
 
-    def convert_star_properties(self) -> None:
+    def convert_PartType4_properties(self) -> None:
         """
         Replaces stellar_age field (which contains the formation scale parameter) to
-        stellar age = (current time - formation time) in Gyr.
+        stellar age = (current time - formation time) in Gyr, and adds InitialMass
+        field which has the correct units.
 
         """
-        if "stars" not in dir(self.ds.fields):
-            raise AttributeError(
-                "'Stars' field does not exist. Needs to be created "
-                "to calculate stellar ages using filters.add_stars()."
-            )
-
         logger.info(
-            "FIELDS: Overriding ('stars', 'stellar_age') field with " "ages in Gyr."
+            "FIELDS: Adding field ('PartType4', 'stellar_age') field with "
+            "ages in Gyr."
         )
 
         self.ds.add_field(
-            ("stars", "stellar_age"),
+            ("PartType4", "stellar_age"),
             function=self._stellar_age,
             sampling_type="local",
             units="Gyr",
@@ -68,19 +64,17 @@ class Fields:
         )
 
         logger.info(
-            "FIELDS: Adding field ('stars', 'InitialMass'), which is identical to "
-            "('stars', 'GFM_InitialMass') but with units changed from 'dimensionless'"
-            " to 'code_mass'."
+            "FIELDS: Adding field ('PartType4', 'InitialMass'), with proper units."
         )
 
         def _get_stellar_mass(
             field: DerivedField,
             data: FieldDetector,
         ) -> NDArray:
-            return self.ds.arr(data["stars", "GFM_InitialMass"].value, "code_mass")
+            return self.ds.arr(data["PartType4", "GFM_InitialMass"].value, "code_mass")
 
         self.ds.add_field(
-            ("stars", "InitialMass"),
+            ("PartType4", "InitialMass"),
             function=_get_stellar_mass,
             sampling_type="local",
             units="code_mass",
@@ -258,7 +252,7 @@ class Fields:
         # scale factor
         current_time = data.ds.current_time.to("Gyr")
         formation_redshift = (
-            1 / np.array(data["stars", "GFM_StellarFormationTime"])
+            1 / np.array(data["PartType4", "GFM_StellarFormationTime"])
         ) - 1
 
         if len(formation_redshift) == 0:
@@ -273,10 +267,15 @@ class Fields:
 
         # calculate formation times from redshift by interpolating redshift grid
         current_time = data.ds.quan(Planck15.age(data.ds.current_redshift).value, "Gyr")
-        formation_time = data.ds.arr(
-            np.interp(formation_redshift, redshift_grid, time_grid), "Gyr"
+
+        # add interpolated redshift if z>0, otherwise add negative number which
+        # makes formation time negative (indicating wind particles)
+        formation_time = np.where(
+            formation_redshift >= 0,
+            np.interp(formation_redshift, redshift_grid, time_grid),
+            2 * current_time,
         )
-        return current_time - formation_time
+        return current_time - data.ds.arr(formation_time, "Gyr")
 
     def check_star_properties(self) -> None:
         """
@@ -290,6 +289,6 @@ class Fields:
         else:
             raise AttributeError(
                 "'stars' field has not properly been set. Run "
-                "'add_stars' method from Filter() and "
-                "'convert_star_properties' method from Fields() first."
+                "convert_PartType4_properties' method from Fields() first "
+                "and then 'add_stars' method from Filter()."
             )

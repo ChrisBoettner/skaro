@@ -43,11 +43,11 @@ bettercode:
 	flake8 src
 	@echo "----------------------------------------------------------------------------------------------------"
 
-## Create conda environment from yaml
+## Create mamba environment from yaml
 create_environment:
 	mamba env create -f environment.yaml
 
-## Save environment yaml using conda
+## Save environment yaml using mamba
 save_environment:
 	mamba env export > environment.yaml
 	

@@ -6,7 +6,7 @@ Created on Thu Feb 23 08:51:50 2023
 @author: chris
 """
 
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 import yt
@@ -30,44 +30,39 @@ class Filter:
         """
         self.ds = ds
 
-    def add_stars(self) -> None:
+    def add_stars(self, age_limits: Optional[tuple[float, float]] = None) -> None:
         """
-        Add filter to ds that selects PartType4 particles with
-        GFM_StellarFormationTime > 0 (meaning stars rather than wind particles).
+        Add filter to ds that selects PartType4 particles with stellar_age > 0
+        (meaning stars rather than wind particles).
+        The particles can further be filtered to only fall into a certain age_range
+        using age_limits.
+
+        Parameters
+        ----------
+        age_limits : Optional[tuple[float,float]], optional
+            If given, only include particles that have an age between the age_limits.
+
         """
 
         @yt.particle_filter(
-            requires=["GFM_StellarFormationTime"],
+            requires=["stellar_age"],
             filtered_type="PartType4",
         )
         def stars(
             pfilter: ParticleFilter,
             data: Any,
         ) -> ArrayLike:
-            age_filter = data[(pfilter.filtered_type, "GFM_StellarFormationTime")] >= 0
+            if age_limits:
+                # if age limits are given, get stars between these limits
+                age_filter = (
+                    age_limits[0] <= data[(pfilter.filtered_type, "stellar_age")]
+                ) & (data[(pfilter.filtered_type, "stellar_age")] <= age_limits[1])
+            else:
+                # otherwise only filter out wind particles
+                age_filter = data[(pfilter.filtered_type, "stellar_age")] >= 0
             return age_filter
 
         self.ds.add_particle_filter("stars")
-
-    def add_old_stars(self) -> None:
-        """
-        Add stars that are older than 100Myr (age required before planets form).
-        Requires creation of star field, and conversion of stellar age, first.
-
-        """
-
-        @yt.particle_filter(
-            requires=["GFM_StellarFormationTime"],
-            filtered_type="stars",
-        )
-        def old_stars(
-            pfilter: ParticleFilter,
-            data: Any,
-        ) -> ArrayLike:
-            age_filter = data[(pfilter.filtered_type, "stellar_age")] > 0.1
-            return age_filter
-
-        self.ds.add_particle_filter("old_stars")
 
     def add_halo_stars(self, ParticleIDs: ArrayLike) -> None:
         """
