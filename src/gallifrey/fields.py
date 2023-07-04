@@ -64,7 +64,7 @@ class Fields:
         )
 
         logger.info(
-            "FIELDS: Adding field ('PartType4', 'InitialMass'), with proper units."
+            "FIELDS: Adding field ('PartType4', 'InitialMass'), with masses in 'code_mass'."
         )
 
         def _get_stellar_mass(
@@ -90,7 +90,6 @@ class Fields:
         imf: ChabrierIMF,
         imf_bounds: tuple[float, float] = (1, 1.04),
         reference_age: Optional[int] = 100000000,
-        age_limits: tuple[float, float] = (0.02, 10),
     ) -> None:
         """
         Add number of planets of a given category associated with the star particle.
@@ -115,8 +114,6 @@ class Fields:
             The age at which to evaluate the planet population model. The default is
             int(1e+8), i.e. 100Myr. If the value is None, the age of the star particle
             is used. (This is much slower and memory intensive.)
-        age_limits : tuple[float, float], optional
-            Age range to consider for star particle. The default is (0.02, 10).
 
         """
         # check if star properties are correctly set
@@ -145,11 +142,7 @@ class Fields:
 
             # calculate planets per star using KNN interpolation of NGPPS results
             planets_per_star = planet_model.prediction(category, variables_dataframe)
-            # exclude systems still in formation stage
-            planets_per_star[stellar_ages < age_limits[0]] = 0
-            # exclude systems where star has gone off main sequence
-            planets_per_star[stellar_ages > age_limits[1]] = 0
-
+            
             # calculate total number of planets
             planets = planets_per_star.to_numpy()[:, 0] * number_of_stars
             return self.ds.arr(planets, "1")
