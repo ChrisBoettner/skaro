@@ -39,7 +39,7 @@ def query_DACE_populations(
     if snapshot_ages is None:
         snapshot_ages = Population.get_snapshot_ages()
 
-    base_path = Path().raw_data("NGPPS")
+    base_path = Path().external_data("NGPPS")
     for population_id in population_ids:
         # create directory if it does not exist
         population_path = pathlib.Path(base_path, population_id)

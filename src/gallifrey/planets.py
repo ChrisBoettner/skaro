@@ -46,7 +46,7 @@ class Population:
         """
         # load populations
         self.population = pd.read_csv(
-            Path().raw_data(f"NGPPS/{population_id}/snapshot_{age}.csv")
+            Path().external_data(f"NGPPS/{population_id}/snapshot_{age}.csv")
         )
 
         # add planet flags and number of planets dataframe
@@ -407,7 +407,7 @@ class Systems:
         ]
         # read variables data file
         raw_variables = pd.read_csv(
-            Path().external_data("NGPPS_variables.txt"),
+            Path().external_data("NGPPS/NGPPS_variables.txt"),
             delimiter=r"\s+",
             names=columns,
         )
