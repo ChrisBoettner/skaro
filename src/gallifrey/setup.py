@@ -96,7 +96,7 @@ def data_setup(
 
         logger.info(
             "STARS: 'stars' field derives from PartType4 field in age range: "
-            f"{[round(bound, 2) for bound in star_age_bounds]}."
+            f"{[round(bound, 2) for bound in star_age_bounds]} Gyr."
         )
 
         fields.convert_PartType4_properties()
