@@ -680,7 +680,8 @@ if __name__ == "__main__":
     # and ridge plots
 
 print("TODO: planets.py")
+print("Currently low number per star in galactic center, bc lots of old stars")
+print("think up a way to only consider eligable stars, rather than setting planets to 0")
 # make a new file where you just analyse original NGPPS sample, including
 # correlation heatmap, etc. Needed to interpret galaxy results
 # -> strongest correlation with initial disk mass, check that out further
-# !remember that some metallicities are far outside NGPPS bounds
