@@ -5,116 +5,67 @@ Created on Fri Jun  9 13:21:08 2023
 
 @author: chris
 """
+import numpy as np
 import yt
+import matplotlib.pyplot as plt
 
 from gallifrey.data.paths import Path
-from gallifrey.utilities.structures import flatten_list
 
-
-def plot_and_show(
-    ds,
-    fields,
-    axis="z",
-    deposition="cic",
-    colormap="kelp",
-    width=(42, "kpc"),
-    weight_field=None,
-    units=None,
-    zlims=None,
-    logs=None,
-    zlabels=None,
-    density=None,
-    **kwargs,
-):
+def plot_maps(planet_categories, data, normal="z", plot_width=(42, "kpc"), 
+                cmap="kelp", figsize=(18.5, 10.5), subplot_columns= 3, 
+                deposition_method="cic", weight_field=None,
+                global_normalisation=True, colorbar_percentiles=(1,99), save=False):
+    
+    # create fields
+    fields = [("stars", category) for category in planet_categories]
+    
+    # create plots using yt
     plot = yt.ParticleProjectionPlot(
-        ds=ds,
+        ds=data,
         fields=fields,
-        axis=axis,
-        width=width,
-        deposition=deposition,
+        normal=normal,
+        width=plot_width,
+        deposition=deposition_method,
         weight_field=weight_field,
-        density=density,
-        **kwargs,
+        density=True,
     )
 
-    if units is not None:
-        for field, unit in units.items():
-            plot.set_unit(field, unit)
-
-    if zlims is not None:
-        for field, zlim in zlims.items():
-            plot.set_zlim(field, zmin=zlim[0], zmax=zlim[1])
-
-    if logs is not None:
-        for field, log in logs.items():
-            plot.set_log(field, log)
-
-    if zlabels is not None:
-        for field, zlabel in zlabels.items():
-            plot.set_colorbar_label(field, zlabel)
+    # choose colorbar label
+    if weight_field is None:
+        label = r"s $\left(1/\mathrm{pc}^2\right)$"
+    elif weight_field == ("stars", "number"):
+        label = r"s Per Star $\left(1/\mathrm{pc}^2\right)$"
+    else:
+         label = (f"s (weighted by {weight_field[-1]})"+
+                  r" $\left(1/\mathrm{pc}^2\right)$")
+    
+    # change density units (need to do first to properly calculate colorbar percentiles)
+    for field in fields:
+        plot.set_unit(field, "1/pc**2")        
+         
+    if global_normalisation:
+        image_values = np.array([np.array(plot.frb[field]) for field 
+                                 in fields]).flatten()
+        percentiles = np.nanpercentile(image_values[image_values > 0], 
+                                       colorbar_percentiles)
+        
 
     for field in fields:
-        plot.set_cmap(field, colormap)
+        if not global_normalisation:
+            image_values = np.array(plot.frb[field]).flatten()
+            percentiles = np.nanpercentile(image_values[image_values > 0], 
+                                           colorbar_percentiles)            
 
-    plot.show()
-    return plot
-
-
-def plot_maps(ds, axis="z", save=False, no_dwarfs=False, zlims=None, **kwargs):
-    if zlims is None:
-        zlims = {}  # if no zlims provided, initialize as an empty dict
-
-    plot_planets = plot_and_show(
-        ds,
-        fields=[("stars", "planets")],
-        axis=axis,
-        units={("stars", "planets"): "1/pc**2"},
-        zlims={
-            ("stars", "planets"): zlims.get(
-                ("stars", "planets"), ((1, "1/pc**2"), (2e3, "1/pc**2"))
-            )
-        },
-        zlabels={("stars", "planets"): r"Planets $\left(1/\mathrm{pc}^2\right)$"},
-        density=True,
-        **kwargs,
-    )
-
-    plots_weighted_planets = plot_and_show(
-        ds,
-        fields=[("stars", "mass_weighted_planets"), ("stars", "star_weighted_planets")],
-        axis=axis,
-        weight_field=("stars", "particle_ones"),
-        zlims={
-            ("stars", "star_weighted_planets"): zlims.get(
-                ("stars", "star_weighted_planets"), ((0.1, ""), (0.5, ""))
-            ),
-            ("stars", "mass_weighted_planets"): zlims.get(
-                ("stars", "mass_weighted_planets"), ((0.5, "1/Msun"), (1.2, "1/Msun"))
-            ),
-        },
-        logs={
-            ("stars", "star_weighted_planets"): False,
-            ("stars", "mass_weighted_planets"): False,
-        },
-        zlabels={
-            ("stars", "star_weighted_planets"): "Star Weighted Planets",
-            ("stars", "mass_weighted_planets"): r"Mass Weighted Planets "
-            r"$\left(1/\mathrm{M_\odot}\right)$",
-        },
-        **kwargs,
-    )
-
+        plot.set_cmap(field, cmap)
+        plot.set_colorbar_label(field, field[-1] + label)
+        plot.set_zlim(field, *percentiles)
+    
+    # convert to matplotlib figure
+    fig = plot.export_to_mpl_figure((np.ceil(len(fields)/subplot_columns).astype(int),
+                                     subplot_columns))
+    fig.set_size_inches(*figsize)
+    fig.tight_layout()
+    
     if save:
-        figs = flatten_list(
-            [
-                [pl.figure for pl in list(plot.plots.values())]
-                for plot in [plot_planets, plots_weighted_planets]
-            ]
-        )
-        names = ["planets", "sw_planets", "mw_planets", "cummulative_planets"]
-        if no_dwarfs:
-            names = [name + "_no_dwarfs" for name in names]
-        for fig, name in zip(figs, names):
-            fig.savefig(Path().figures(f"planets/maps_{axis}_{name}.pdf"))
-
-    return plot_planets, plots_weighted_planets
+        fig.savefig(Path().figures(f"planets/planets_maps_{normal}.pdf"))
+    return plot, fig
