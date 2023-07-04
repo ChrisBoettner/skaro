@@ -639,7 +639,7 @@ class PlanetModel:
 
 
 if __name__ == "__main__":
-    # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     import seaborn as sns
 
     pop_id = "ng75"
@@ -674,12 +674,12 @@ if __name__ == "__main__":
     corr_matrix = original_sample.corr(method="kendall").drop(
         columns=model.features, index=["age", *categories]
     )
+    plt.figure()
     sns.heatmap(corr_matrix, vmin=-1, vmax=1, square=True, annot=True, cmap="vlag")
 
     # and ridge plots
 
 print("TODO: planets.py")
-print("INSTALL MAMBA")
 # make a new file where you just analyse original NGPPS sample, including
 # correlation heatmap, etc. Needed to interpret galaxy results
 # -> strongest correlation with initial disk mass, check that out further
