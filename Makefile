@@ -45,17 +45,17 @@ bettercode:
 
 ## Create conda environment from yaml
 create_environment:
-	conda env create -f environment.yaml
+	mamba env create -f environment.yaml
 
 ## Save environment yaml using conda
 save_environment:
-	conda env export > environment.yaml
+	mamba env export > environment.yaml
 	
 ## Update existing environment using yaml
 update_environment:
-	conda deactivate
-	conda env update -f environment.yaml --prune
-	conda activate gallifrey
+	mamba deactivate
+	mamba env update -f environment.yaml --prune
+	mamba activate gallifrey
 
 ## create requirements.txt with pipreqs
 save_requirements:
