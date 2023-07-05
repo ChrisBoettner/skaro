@@ -5,13 +5,14 @@ Created on Thu Mar  9 13:10:14 2023
 
 @author: chris
 """
-
 from typing import Optional
 
 import numpy as np
 import pandas as pd
 from astropy.cosmology import Planck15
 from numpy.typing import NDArray
+from scipy.integrate import trapezoid
+from scipy.interpolate import interp1d
 from yt.fields.derived_field import DerivedField
 from yt.fields.field_detector import FieldDetector
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
@@ -87,37 +88,45 @@ class Fields:
     def add_planets(
         self,
         category: str,
-        host_star_mass: float,
+        host_star_masses: float | tuple[float, ...],
         planet_model: PlanetModel,
         imf: ChabrierIMF,
-        imf_bounds: tuple[float, float] = (1, 1.04),
+        imf_bounds: tuple[float, float],
         reference_age: Optional[int] = 100000000,
+        num_integral_points: int = 50,
     ) -> None:
         """
         Add number of planets of a given category associated with the star particle.
         This is done by calculating the number of planets per star using the
         NGPPS population model and then multiplying by the number of stars in the
-        considered range.
+        considered range in the case that host_star_masses is scalar. If
+        host_star_masses is a tuple, calculate values for different masses and the
+        corresponding IMF values and integrate numerically. (Values between masses
+        in list are interpolated.)
 
         Parameters
         ----------
         category : str
             The category of planets to consider, e.g. "Earth", "Giant", etc. Find
             list of available categories in planet_model.population class.
-        host_mass_star:
-            Mass of host star, must be in [0.1, 0.3, 0.5, 1].
+        host_star_masses : float | tuple[float, ...]
+            Masses of host stars used for calculation. Can be a scalar of tuple of
+            values, values must be in [0.1, 0.3, 0.5, 1].
         planet_model : PlanetModel
             The planet model that associates a stellar particle properties
             with number of planets (of a given class).
         imf : ChabrierIMF
             Stellar initial mass function of the star particles..
-        imf_bounds : tuple[float, float], optional
+        imf_bounds : tuple[float, float]
             The range over with to integrate the imf. Corresponds to the mass range
-            of stars considered. The default is (1, 1.04).
+            of stars considered.
         reference_age : Optional[int], optional
             The age at which to evaluate the planet population model. The default is
             int(1e+8), i.e. 100Myr. If the value is None, the age of the star particle
             is used. (This is much slower and memory intensive.)
+        num_integral_points : int, optional
+            Number of points to evaluate the numerical integral on, in case
+            host_star_masses is a list. The default is 50.
 
         """
         # check if star properties are correctly set
@@ -128,7 +137,6 @@ class Fields:
             metallicities = data["stars", "[Fe/H]"]
 
             particle_masses = data["stars", "InitialMass"].to("Msun").value
-            number_of_stars = imf.number_of_stars(particle_masses, *imf_bounds)
 
             # choose what age to associate with star particles
             if reference_age is None:
@@ -144,13 +152,49 @@ class Fields:
                 columns=["age", "[Fe/H]"],
             )
 
-            # calculate planets per star using KNN interpolation of NGPPS results
-            planets_per_star = planet_model.prediction(
-                category, variables_dataframe, host_star_mass
-            )
+            # if host star mass is scalar, calculate planets for that mass and
+            # multiply by imf around that region
+            if isinstance(host_star_masses, (int, float)):
+                # calculate planets per star using KNN interpolation of NGPPS results
+                planets_per_star = planet_model.prediction(
+                    category, variables_dataframe, host_star_masses
+                )
+                # calculate number of stars
+                number_of_stars = imf.number_of_stars(particle_masses, *imf_bounds)
+                # calculate total number of planets
+                planets = planets_per_star.to_numpy()[:, 0] * number_of_stars
 
-            # calculate total number of planets
-            planets = planets_per_star.to_numpy()[:, 0] * number_of_stars
+            # if host star mass is list, numerically integrate imf*number of stars
+            elif isinstance(host_star_masses, tuple):
+                # sort masses for interpolation
+                sorted_masses = sorted(host_star_masses)
+
+                # create integration space
+                x_space = np.geomspace(*imf_bounds, num_integral_points)
+
+                # linear interpolation of number of planets
+                planets_per_star_function = interp1d(
+                    sorted_masses,
+                    np.array(
+                        [
+                            planet_model.prediction(
+                                category, variables_dataframe, mass
+                            ).to_numpy()[:, 0]
+                            for mass in sorted_masses
+                        ]
+                    ),
+                    axis=0,
+                )
+                planets_per_star = planets_per_star_function(x_space)
+
+                # numerical integration
+                planets = trapezoid(planets_per_star * imf.pdf(x_space), x_space)
+
+            else:
+                raise ValueError(
+                    "ngpps_star_masses must either be number or a list of " "numbers."
+                )
+
             return self.ds.arr(planets, "1")
 
         self.ds.add_field(

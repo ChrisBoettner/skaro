@@ -17,20 +17,22 @@ from gallifrey.setup import data_setup
 
 #%%
 num_embryos = 50
-host_star_mass = 1
+host_star_mass = (0.7, 1)
 ds, mw, stellar_model, imf, planet_model = data_setup(ngpps_num_embryos=num_embryos,
-                                                      ngpps_star_mass=host_star_mass)
-
-population_id = planet_model.get_population_id(num_embryos, host_star_mass)
-systems = planet_model.get_systems(population_id)
+                                                      ngpps_star_masses=host_star_mass)
 
 print("check if the rescaling is correct, maybe compare actual values with results in paper")
 print("currently m_g prop m_star, r_in prop m_star^1/3, [Fe/H] and mwind const")
 print("reasoning in paper, write down. actually make notes while reading all papers")
 
+print("check if imf integration works")
 #%%
 category =  "Earth"
+host_star_mass = 1
 samples = int(1e5)
+
+population_id = planet_model.get_population_id(num_embryos, host_star_mass)
+systems = planet_model.get_systems(population_id)
 
 variables = pd.DataFrame(
     np.linspace(*systems.bounds["[Fe/H]"], samples), columns=["[Fe/H]"]

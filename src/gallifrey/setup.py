@@ -5,9 +5,9 @@ Created on Mon Jul  3 11:29:47 2023
 
 @author: chris
 """
-
 from typing import Any, Optional
 
+import numpy as np
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 
 from gallifrey.data.load import load_snapshot
@@ -30,9 +30,9 @@ def data_setup(
     resolution: int = 4096,
     sim_id: str = "09_18",
     ngpps_num_embryos: int = 50,
-    ngpps_star_mass: float = 1,
+    ngpps_star_masses: float | tuple[float, ...] = 1,
     lower_stellar_age_bound: float = 0.02,
-    imf_bounds: tuple[float, float] = (1, 1.04),
+    imf_delta: float = 0.05,
     planet_params: Optional[dict[str, Any]] = None,
 ) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel]:
     """
@@ -51,15 +51,18 @@ def data_setup(
     ngpps_num_embryos : tuple[int, float], optional
         Parameter describing the NGPPS population run, number of embryos used for the
         run. The default is 50.
-    ngpps_star_mass:
-        Parameter describing the NGPPS population run, mass of host star. The
-        default is 1.
+    ngpps_star_masses: float | tuple[float, ...]
+        Host star masses considered in the planet population calculation. Can be scalar
+        (in which case the imf_delta is invoked for the IMF integration) or a tuple. The
+        values must be in the NGPPS runs (0.1, 0.3, 0.5, 0.7, 1). Masses < 1 only
+        available in ngpps_num_embryos = 50. The default is 1.
     star_age_bounds : tuple[float, float], optional
         The age range for star particles to be considered in the add_stars
         command. The default is (0.02, 10).
-    imf_bounds : tuple[float, float], optional
-        The range over with to integrate the imf. Corresponds to the mass range
-        of stars considered. The default is (1, 1.04).
+    imf_delta : float, optional
+        If ngpps_star_masses is a single number, the IMF is integrated in the range
+        ((1-imf_delta_mass)*ngpps_star_mass, (1+imf_delta)*ngpps_star_masses). No effect
+        if the ngpps_star_masses span a range. The default is 0.05.
     lower_stellar_age_bound: float, optional
         Lower age of star particles considered. The upper end is inferred based on the
         stellar model and upper IMF bound. The default is 0.02, i.e. 20Myr, the planet
@@ -94,6 +97,19 @@ def data_setup(
         stellar_model = StellarModel()
         imf = ChabrierIMF()
 
+        if isinstance(ngpps_star_masses, (int, float)):
+            imf_bounds = (
+                (1 - imf_delta) * ngpps_star_masses,
+                (1 + imf_delta) * ngpps_star_masses,
+            )
+        elif isinstance(ngpps_star_masses, tuple):
+            imf_bounds = (np.amin(ngpps_star_masses), np.amax(ngpps_star_masses))
+        else:
+            raise ValueError(
+                "ngpps_star_masses must either be number (int, float) or a list of "
+                "numbers."
+            )
+
         # create upper bound for star particle ages considered, based on lower IMF limit
         upper_stellar_age_bound = stellar_model.lifetime(imf_bounds[0])
         star_age_bounds = (lower_stellar_age_bound, upper_stellar_age_bound)
@@ -118,10 +134,10 @@ def data_setup(
         for category in planet_model.categories:
             fields.add_planets(
                 category,
-                ngpps_star_mass,
+                ngpps_star_masses,
                 planet_model,
                 imf,
-                imf_bounds=imf_bounds,
+                imf_bounds,
                 **planet_params,
             )
 
