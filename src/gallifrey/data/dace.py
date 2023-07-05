@@ -34,7 +34,16 @@ def query_DACE_populations(
 
     """
     if population_ids is None:
-        population_ids = ["ng96", "ng74", "ng75", "ng76"]
+        population_ids = [
+            "ng96",
+            "ng74",
+            "ng75",
+            "ng76",
+            "ngm10",
+            "ngm14",
+            "ngm12",
+            "ngm11",
+        ]
 
     if snapshot_ages is None:
         snapshot_ages = Population.get_snapshot_ages()

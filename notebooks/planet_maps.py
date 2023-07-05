@@ -8,7 +8,6 @@ Created on Fri Jun  9 13:21:08 2023
 import warnings
 from typing import Any, Optional
 
-import matplotlib.patheffects as pe
 import numpy as np
 import yt
 from matplotlib.pyplot import Axes, Figure
@@ -333,7 +332,8 @@ def add_labels(fig: Figure, labels: list[str]) -> None:
             transform=ax.transAxes,
             fontsize=label_font.get_size(),
             fontname=label_font.get_name(),
-            path_effects=[pe.withStroke(linewidth=2, foreground="white")],
+            bbox=dict(facecolor='white', alpha=0.6, edgecolor='none', 
+                      boxstyle="round")
         )
 
 
@@ -360,8 +360,8 @@ def filter_subplot_axes(fig: Figure) -> list[Axes]:
             (ax.get_xlim()[1] - ax.get_xlim()[0])
             / (ax.get_ylim()[1] - ax.get_ylim()[0])
         )
-        if aspect_ratio < 0.8 or aspect_ratio > 1.5:
+        if not (0.99 < aspect_ratio < 1.01):
             continue
-
-        axes.append(ax)
+        else:
+            axes.append(ax)
     return axes

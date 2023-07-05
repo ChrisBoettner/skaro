@@ -64,7 +64,8 @@ class Fields:
         )
 
         logger.info(
-            "FIELDS: Adding field ('PartType4', 'InitialMass'), with masses in 'code_mass'."
+            "FIELDS: Adding field ('PartType4', 'InitialMass'), with masses in "
+            " 'code_mass'."
         )
 
         def _get_stellar_mass(
@@ -142,7 +143,7 @@ class Fields:
 
             # calculate planets per star using KNN interpolation of NGPPS results
             planets_per_star = planet_model.prediction(category, variables_dataframe)
-            
+
             # calculate total number of planets
             planets = planets_per_star.to_numpy()[:, 0] * number_of_stars
             return self.ds.arr(planets, "1")
