@@ -14,19 +14,30 @@ import yt
 
 from gallifrey.particles import rotated_dataset
 from gallifrey.setup import data_setup
-from gallifrey.utilities.math import calculate_pca
 
-ds, mw, stellar_model, imf, planet_model = data_setup()
+#%%
+num_embryos = 50
+host_star_mass = 1
+ds, mw, stellar_model, imf, planet_model = data_setup(ngpps_num_embryos=num_embryos,
+                                                      ngpps_star_mass=host_star_mass)
+
+population_id = planet_model.get_population_id(num_embryos, host_star_mass)
+systems = planet_model.get_systems(population_id)
+
+print("check if the rescaling is correct, maybe compare actual values with results in paper")
+print("currently m_g prop m_star, r_in prop m_star^1/3, [Fe/H] and mwind const")
+print("reasoning in paper, write down. actually make notes while reading all papers")
 
 #%%
 category =  "Earth"
 samples = int(1e5)
 
 variables = pd.DataFrame(
-    np.linspace(*planet_model.systems.bounds["[Fe/H]"], samples), columns=["[Fe/H]"]
+    np.linspace(*systems.bounds["[Fe/H]"], samples), columns=["[Fe/H]"]
 )
 variables["age"] = int(1e9)
-result = planet_model.prediction(category, variables, return_full=True)
+result = planet_model.prediction(category, variables, host_star_mass = host_star_mass, 
+                                 return_full=True)
 
 result["planets_binned"] = pd.cut(result[category], bins=4)
 sns.pairplot(
@@ -41,17 +52,17 @@ categories = [
     for category in planet_model.categories
     if category not in ["Dwarf", "D-Burner"]
 ]
-original_variables = planet_model.systems.variables.reset_index(drop=True)
+original_variables = systems.variables.reset_index(drop=True)
 original_variables["age"] = int(1e8)
 original_sample = planet_model.prediction(
-    categories, original_variables, return_full=True, neighbors=1
+    categories, original_variables, host_star_mass = host_star_mass, 
+    return_full=True, neighbors=1
 )
 
 corr_matrix = original_sample.corr(method="kendall").drop(
     columns=planet_model.features, index=["age", *categories]
 )
 
-plt.figure()
 sns.pairplot(
     original_sample.drop(columns=["age", *[c for c in categories if c != "Earth"]]),
     hue="Earth")

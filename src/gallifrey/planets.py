@@ -145,7 +145,8 @@ class Systems:
     ) -> None:
         """
         Load system variables connected to a specific simulation run given by the
-        population_id.
+        population_id. If the host star mass is smaller than 1, rescale according
+        to prescriptions given in paper IV (Burn2021).
         Also create distributions of these variables according to the description in
         paper II (Emsenhuber2021). The default distributions are truncated Gaussians,
         custom distributions can be passed using the distributions parameter.
@@ -158,6 +159,22 @@ class Systems:
             Dictonary of probability distributions for variable. Of form
             {variable_name: Callable}.
         """
+        self.host_star_mass_dict = {
+            "ng96": 1,
+            "ng74": 1,
+            "ng75": 1,
+            "ng76": 1,
+            "ngm12": 0.7,
+            "ngm11": 0.5,
+            "ngm14": 0.3,
+            "ngm10": 0.1,
+        }
+
+        try:
+            self.host_star_mass = self.host_star_mass_dict[population_id]
+        except KeyError:
+            raise ValueError("population_id not known.")
+
         # create variable dataframe
         self.variables = self.load_system_variables(population_id)
         self.variable_names = list(self.variables.columns)
@@ -185,8 +202,8 @@ class Systems:
 
     def load_system_variables(self, population_id: str) -> pd.DataFrame:
         """
-        Loads system monte carlo variables. Currently only implemented for solar-like
-        runs with population_id's ["ng96", "ng74", "ng75", "ng76"].
+        Loads system monte carlo variables as provided by Emsenhuber. Rescale according
+        to host star mass following paper IV (Burn2021).
 
         Parameters
         ----------
@@ -205,33 +222,57 @@ class Systems:
             Dataframe containing the system variables.
 
         """
-        if population_id in ["ng96", "ng74", "ng75", "ng76"]:
-            raw_variables = self._load_raw_system_variables()
+        raw_variables = self._load_raw_system_variables()
 
-            system_variables = pd.DataFrame()
-            system_variables["system_id"] = raw_variables["system_id"]
-            # calculate Monte Carlo variables as described in paper II (Emsenhuber2021):
-            # mass of gas disk
-            system_variables["log_initial_mass"] = np.log10(
-                (raw_variables["aout"] / 10) ** 1.6 * 2e-3
-            )  # paper Eq. 1
-            # metallicity
-            system_variables["[Fe/H]"] = np.log10(
-                raw_variables["fpg"] / 0.0149
-            )  # paper Eq. 2
-            # inner edge
-            system_variables["log_inner_edge"] = np.log10(raw_variables["ain"])
-            # photo evaporation
-            system_variables["log_photoevaporation"] = np.log10(raw_variables["mwind"])
+        system_variables = pd.DataFrame()
+        system_variables["system_id"] = raw_variables["system_id"]
+        # calculate Monte Carlo variables as described in paper II (Emsenhuber2021):
+        # mass of gas disk
+        system_variables["log_initial_mass"] = np.log10(
+            (raw_variables["aout"] / 10) ** 1.6 * 2e-3
+        )  # paper Eq. 1
+        # metallicity
+        system_variables["[Fe/H]"] = np.log10(
+            raw_variables["fpg"] / 0.0149
+        )  # paper Eq. 2
+        # inner edge
+        system_variables["log_inner_edge"] = np.log10(raw_variables["ain"])
+        # photo evaporation
+        system_variables["log_photoevaporation"] = np.log10(raw_variables["mwind"])
 
-            # make system_id the index of the dataframe
-            system_variables = system_variables.set_index("system_id")
-        else:
-            raise NotImplementedError(
-                "Population ID does not much any solar-like run. If you "
-                "use other runs with other stellar masses, the system "
-                "variables won't match."
-            )
+        # scale system variables according to host star mass
+        system_variables = self.scale_variables(system_variables, self.host_star_mass)
+
+        # # make system_id the index of the dataframe
+        system_variables = system_variables.set_index("system_id")
+        return system_variables
+
+    @staticmethod
+    def scale_variables(
+        system_variables: pd.DataFrame,
+        host_star_mass: float,
+    ) -> pd.DataFrame:
+        """
+        Scaling the variables with the mass of the host star according to paper IV
+        (Burn2021).
+
+        Parameters
+        ----------
+        system_variables : pd.DataFrame
+            Dataframe containing the system variables.
+        host_star_mass : float
+            Mass of host star, must be in [0.1, 0.3, 0.5, 1]..
+
+        Returns
+        -------
+        system_variables : pd.DataFrame
+            Dataframe containing the rescaled system variables.
+
+        """
+        # gas mass scales linearly with star mass
+        system_variables["log_initial_mass"] -= np.log10(host_star_mass)
+        # inner edge scales with (star mass)^1/3
+        system_variables["log_inner_edge"] -= 1 / 3 * np.log10(host_star_mass)
         return system_variables
 
     def variable_bounds(self) -> dict[str, tuple[float, float]]:
@@ -252,7 +293,7 @@ class Systems:
         if not hasattr(self, "variables"):
             raise AttributeError(
                 "No 'variables' dataframe found to calculate bounds from. "
-                "Create frist using 'load_system_variables'."
+                "Create first using 'load_system_variables'."
             )
 
         bounds = pd.DataFrame(
@@ -429,14 +470,31 @@ class PlanetModel:
 
     """
 
-    def __init__(self, population_id: str):
+    def __init__(self, num_embryos: int) -> None:
         """
-        Initialize a planet model based on specific population.
+        Initialize a planet model based on specific population, based on number
+        of embryos. Populations with a host star mass < 1 only have 50 embryo run.
 
         Parameters
-        population_id : str
-            Name of the population run.
+        ----------
+        num_embryos : int
+            Number of embryos used for population run, must be in [10, 20, 50, 100].
+
         """
+        self.num_embryos = num_embryos
+
+        # available populations dict with keys [number of embryos, mass of star]
+        self.populations_dict = {
+            (10, 1): "ng96",
+            (20, 1): "ng74",
+            (50, 1): "ng75",
+            (100, 1): "ng76",
+            (50, 0.7): "ngm12",
+            (50, 0.5): "ngm11",
+            (50, 0.3): "ngm14",
+            (50, 0.1): "ngm10",
+        }
+
         # available snapshot ages (code to generate them so that get_snapshot_ages()
         # from dace module doesn't have to be run, and there is no huge list here. Might
         # lead to errors if snapshot ages change for a different population run)
@@ -447,8 +505,6 @@ class PlanetModel:
                 for j in range(1, 10 if i != 10 else 2)
             ]
         )
-
-        self.population_id = population_id
 
         # define planet categories
         self.category_dict = {
@@ -462,16 +518,35 @@ class PlanetModel:
         }
         self.categories = list(self.category_dict.keys())
 
-        # load systems information
-        self.systems = Systems(self.population_id)
-
-    @methodtools.lru_cache(maxsize=256)
-    def get_population(self, age: int) -> Population:
+    def get_population_id(self, num_embryos: int, host_star_mass: float) -> str:
         """
-        Retrieve population for the given age using the lru_cache for efficiency.
+        Get population ID for run with specified number of embryos and host_star_mass
 
         Parameters
         ----------
+        num_embryos : int
+            Number of embryos used for population run, must be in [10, 20, 50, 100].
+        host_star_mass : float
+            Mass of host star, must be in [0.1, 0.3, 0.5, 1]..
+
+        Returns
+        -------
+        str
+            Population ID for run.
+
+        """
+        return self.populations_dict[(self.num_embryos, host_star_mass)]
+
+    @methodtools.lru_cache(maxsize=256)
+    def get_population(self, population_id: str, age: int) -> Population:
+        """
+        Retrieve population for the given population ID and age using the lru_cache
+        for efficiency.
+
+        Parameters
+        ----------
+        population_id : str
+            Name of the population run.
         age : int
             Age of the population to retrieve.
 
@@ -479,15 +554,36 @@ class PlanetModel:
         ----------
         Population
             An instance of the Population class.
+
         """
         if age not in self.available_ages:
             raise ValueError("Age does not match any snapshot.")
-        return Population(self.population_id, age, self.category_dict)
+        return Population(population_id, age, self.category_dict)
+
+    @methodtools.lru_cache(maxsize=256)
+    def get_systems(self, population_id: str) -> Systems:
+        """
+        Retrieve system information for the given population ID using the lru_cache
+        for efficiency.
+
+        Parameters
+        ----------
+        population_id : str
+            Name of the population run.
+
+        Returns
+        ----------
+        Systems
+            An instance of the Systems class.
+
+        """
+        return Systems(population_id)
 
     @methodtools.lru_cache(maxsize=512)
     def get_planet_function(
         self,
         category: str,
+        population_id: str,
         ages: Optional[tuple[int, ...] | int] = None,
         neighbors: int = 3,
         weights: str = "uniform",
@@ -500,6 +596,8 @@ class PlanetModel:
         ----------
         category: str
             Category that is matched to system variables.
+        population_id : str
+            Name of the population run.
         ages : Optional[tuple[int, ...]] | int], optional
             A list of snapshot ages to include in the interpolation. The default is
             None, which includes every age found in available_ages.
@@ -533,9 +631,10 @@ class PlanetModel:
         # gather data for considered snapshots
         datasets = []
         for age in ages:
-            population = self.get_population(age)
+            population = self.get_population(population_id, age)
+            systems = self.get_systems(population_id)
             data = population.match_dataframes(
-                category, system_dataframe=self.systems.variables
+                category, system_dataframe=systems.variables
             )
             data["age"] = age
             datasets.append(data)
@@ -564,6 +663,7 @@ class PlanetModel:
         self,
         categories: str | list,
         variables: pd.DataFrame,
+        host_star_mass: float,
         ages: Optional[tuple[int, ...] | int] = None,
         return_full: bool = False,
         **kwargs: Any,
@@ -583,6 +683,8 @@ class PlanetModel:
             Category that is matched to system variables.
         variables : pd.DataFrame
             DataFrame of variables to be used in the prediction.
+        host_mass_star:
+            Mass of host star, must be in [0.1, 0.3, 0.5, 1].
         ages : Optional[tuple[int, ...]] | int], optional
             A list of snapshot ages to include in the interpolation. The default is
             None, in that case the relevant ages are inferred from the age column
@@ -610,8 +712,20 @@ class PlanetModel:
         if "age" not in variables.columns:
             raise ValueError("variables dataframe needs to contain column 'ages'.")
 
-        # Sample the system variable distributions
-        sample = self.systems.sample_distribution(variables.shape[0])
+        # identify population run
+        try:
+            population_id = self.get_population_id(self.num_embryos, host_star_mass)
+        except KeyError:
+            raise ValueError(
+                "Population not found. Are you sure the combinations of "
+                "embryo number and host star mass exists?"
+            )
+
+        # get systems
+        systems = self.get_systems(population_id)
+        # sample the system variable distributions amd scale according to host mass
+        sample = systems.sample_distribution(variables.shape[0])
+        sample = systems.scale_variables(sample, host_star_mass)
 
         # Replace sample variables with the passed variables
         for column in variables.columns:
@@ -625,7 +739,9 @@ class PlanetModel:
         # Get the KNN model and predict the category
         prediction_dataframe = sample.copy()
         for category in categories:
-            knn, scaler = self.get_planet_function(category, ages=ages, **kwargs)
+            knn, scaler = self.get_planet_function(
+                category, population_id, ages=ages, **kwargs
+            )
             # scale data with same scaler used for fitting KNN
             data_scaled = pd.DataFrame(
                 scaler.transform(sample), columns=sample.columns, index=variables.index

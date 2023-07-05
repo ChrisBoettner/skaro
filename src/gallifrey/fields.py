@@ -87,6 +87,7 @@ class Fields:
     def add_planets(
         self,
         category: str,
+        host_star_mass: float,
         planet_model: PlanetModel,
         imf: ChabrierIMF,
         imf_bounds: tuple[float, float] = (1, 1.04),
@@ -103,6 +104,8 @@ class Fields:
         category : str
             The category of planets to consider, e.g. "Earth", "Giant", etc. Find
             list of available categories in planet_model.population class.
+        host_mass_star:
+            Mass of host star, must be in [0.1, 0.3, 0.5, 1].
         planet_model : PlanetModel
             The planet model that associates a stellar particle properties
             with number of planets (of a given class).
@@ -142,7 +145,9 @@ class Fields:
             )
 
             # calculate planets per star using KNN interpolation of NGPPS results
-            planets_per_star = planet_model.prediction(category, variables_dataframe)
+            planets_per_star = planet_model.prediction(
+                category, variables_dataframe, host_star_mass
+            )
 
             # calculate total number of planets
             planets = planets_per_star.to_numpy()[:, 0] * number_of_stars
