@@ -492,6 +492,30 @@ class ChabrierIMF(rv_continuous):
         )
         return cdf
 
+    def number_density(
+        self,
+        M_star: float | NDArray,
+        m: float | NDArray,
+    ) -> float | NDArray:
+        """
+        Value of pdf at m, rescaled by total amount of stellar mass (and number
+        normalisation).
+
+        Parameters
+        ----------
+        M_star : float|NDArray
+            Total stellar mass created.
+        m : float|NDArray
+            Points where to evaluate the pdf.
+
+        Returns
+        -------
+        float | NDArray
+            Number density of stars.
+
+        """
+        return self.number_normalisation * np.outer(M_star, self.pdf(m))
+
     def number_of_stars(
         self,
         M_star: float | NDArray,

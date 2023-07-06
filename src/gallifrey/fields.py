@@ -157,7 +157,7 @@ class Fields:
             if isinstance(host_star_masses, (int, float)):
                 # calculate planets per star using KNN interpolation of NGPPS results
                 planets_per_star = planet_model.prediction(
-                    category, variables_dataframe, host_star_masses
+                    category, host_star_masses, variables_dataframe
                 )
                 # calculate number of stars
                 number_of_stars = imf.number_of_stars(particle_masses, *imf_bounds)
@@ -170,7 +170,7 @@ class Fields:
                 sorted_masses = sorted(host_star_masses)
 
                 # create integration space
-                x_space = np.geomspace(*imf_bounds, num_integral_points)
+                m_space = np.geomspace(*imf_bounds, num_integral_points)
 
                 # linear interpolation of number of planets
                 planets_per_star_function = interp1d(
@@ -178,17 +178,21 @@ class Fields:
                     np.array(
                         [
                             planet_model.prediction(
-                                category, variables_dataframe, mass
+                                category, mass, variables_dataframe
                             ).to_numpy()[:, 0]
                             for mass in sorted_masses
                         ]
                     ),
                     axis=0,
                 )
-                planets_per_star = planets_per_star_function(x_space)
+                planets_per_star = planets_per_star_function(m_space)
+
+                # IMF njmber density contribution, value of the pdf rescaled for the
+                # mass of the star particle
+                imf_contribution = imf.number_density(particle_masses, m_space)
 
                 # numerical integration
-                planets = trapezoid(planets_per_star * imf.pdf(x_space), x_space)
+                planets = trapezoid(planets_per_star.T * imf_contribution, m_space)
 
             else:
                 raise ValueError(

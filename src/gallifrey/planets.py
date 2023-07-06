@@ -535,7 +535,7 @@ class PlanetModel:
             Population ID for run.
 
         """
-        return self.populations_dict[(self.num_embryos, host_star_mass)]
+        return self.populations_dict[(num_embryos, host_star_mass)]
 
     @methodtools.lru_cache(maxsize=256)
     def get_population(self, population_id: str, age: int) -> Population:
@@ -649,7 +649,6 @@ class PlanetModel:
         data_scaled = pd.DataFrame(
             scaler.fit_transform(input_data),
             columns=input_data.columns,
-            index=input_data.index,
         )
 
         # save the features seen during training
@@ -662,10 +661,12 @@ class PlanetModel:
     def prediction(
         self,
         categories: str | list,
-        variables: pd.DataFrame,
         host_star_mass: float,
+        variables: Optional[pd.DataFrame] = None,
         ages: Optional[tuple[int, ...] | int] = None,
         return_full: bool = False,
+        num_samples: int = 5000,
+        default_age: int = 100000000,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """
@@ -681,10 +682,12 @@ class PlanetModel:
         ----------
         category: str
             Category that is matched to system variables.
-        variables : pd.DataFrame
-            DataFrame of variables to be used in the prediction.
         host_mass_star:
             Mass of host star, must be in [0.1, 0.3, 0.5, 1].
+        variables : Optional[pd.DataFrame], optional
+            DataFrame of variables to be used in the prediction, the remaining variables
+            are sampled from variable distributions. The default is None, which means
+            all parameter are sampled from distribution.
         ages : Optional[tuple[int, ...]] | int], optional
             A list of snapshot ages to include in the interpolation. The default is
             None, in that case the relevant ages are inferred from the age column
@@ -692,6 +695,14 @@ class PlanetModel:
         return_full : bool, optional
             If True, return the full DataFrame (variables + prediction). Otherwise,
             return only the category column (i.e. the prediction).
+        num_samples: int
+            If variables dataframe is None, use this many samples from distribution.
+            Otherwise number of samples is inferred from shape of variables dataframe.
+            The default is 5000.
+        default_age: int
+            The default age to assign to the population if the variables dataframe is
+            None. Otherwise, age is inferred from age column of variables dataframe.
+            The default is 100000000, i.e. 100Myr.
         kwargs : Any
             Additional arguments to pass to the get_planet_function method.
 
@@ -709,9 +720,6 @@ class PlanetModel:
         else:
             raise ValueError("categories must be str or list of strings.")
 
-        if "age" not in variables.columns:
-            raise ValueError("variables dataframe needs to contain column 'ages'.")
-
         # identify population run
         try:
             population_id = self.get_population_id(self.num_embryos, host_star_mass)
@@ -721,15 +729,28 @@ class PlanetModel:
                 "embryo number and host star mass exists?"
             )
 
+        # check if ages column exists if not given and set number of samples
+        if variables is not None:
+            if "age" not in variables.columns:
+                raise ValueError("variables dataframe needs to contain column 'age'.")
+
+            num_samples = len(variables)
+
         # get systems
         systems = self.get_systems(population_id)
         # sample the system variable distributions amd scale according to host mass
-        sample = systems.sample_distribution(variables.shape[0])
+        sample = systems.sample_distribution(num_samples)
         sample = systems.scale_variables(sample, host_star_mass)
 
-        # Replace sample variables with the passed variables
-        for column in variables.columns:
-            sample[column] = variables[column]
+        # if variables dataframe does not exist, set default age
+        # otherwise if it exists, overwrite sample columns with columns given by
+        # variables dataframe
+        if variables is None:
+            sample["age"] = default_age
+        else:
+            for column in variables.columns:
+                # match on same index, otherwise matching error can occur
+                sample[column] = variables.reset_index(drop=True)[column]
 
         # find relevant snapshot ages to be passed to get_planet_function,
         # saves a lot of time if ages are all the same or similar
@@ -743,9 +764,7 @@ class PlanetModel:
                 category, population_id, ages=ages, **kwargs
             )
             # scale data with same scaler used for fitting KNN
-            data_scaled = pd.DataFrame(
-                scaler.transform(sample), columns=sample.columns, index=variables.index
-            )
+            data_scaled = pd.DataFrame(scaler.transform(sample), columns=sample.columns)
             prediction_dataframe[category] = knn.predict(data_scaled)
 
         if return_full:

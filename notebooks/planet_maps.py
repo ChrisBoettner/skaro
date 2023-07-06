@@ -61,7 +61,8 @@ def plot_maps(
     deposition_method : str, optional
         Deposition method for fixed resolution buffer. The default is "cic".
     density_unit : str, optional
-        Unit for spatial density. The default is "1/pc**2".
+        Unit for spatial density. The default is "1/pc**2". Changing this value will
+        lead to an incorrect colorbar, which needs to be adjusted manually.
     font_dict : dict[str, Any], optional
         Dictonary of additional font properties. The default is {"size": 16}.
     subplot_columns : int, optional
@@ -190,7 +191,9 @@ def plot_configurations(
         if colorbar_normalisation == "row" and ((i + 1) % subplot_columns != 0):
             plot.set_colorbar_label(field, r"")
         else:
-            plot.set_colorbar_label(field, r"$\left(1/\mathrm{pc}^2\right)$")
+            plot.set_colorbar_label(
+                field, r"Surface Density $\left(1/\mathrm{pc}^2\right)$"
+            )
         plot.set_figure_size(figsize)
         plot.set_font(fontdict)
 
@@ -248,7 +251,7 @@ def set_colorbar_limits(
     elif colorbar_normalisation == "global":
         colorbar_limits = (
             np.repeat(np.nanpercentile(image_values, colorbar_percentiles), len(fields))
-            .reshape(2, len(fields))
+            .reshape(2, -1)
             .T
         )
     else:
@@ -332,8 +335,7 @@ def add_labels(fig: Figure, labels: list[str]) -> None:
             transform=ax.transAxes,
             fontsize=label_font.get_size(),
             fontname=label_font.get_name(),
-            bbox=dict(facecolor='white', alpha=0.6, edgecolor='none', 
-                      boxstyle="round")
+            bbox=dict(facecolor="white", alpha=0.6, edgecolor="none", boxstyle="round"),
         )
 
 
