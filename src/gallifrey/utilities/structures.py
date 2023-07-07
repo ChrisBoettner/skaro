@@ -5,6 +5,7 @@ Created on Thu Jun 15 14:02:09 2023
 
 @author: chris
 """
+from functools import lru_cache
 from typing import Any
 
 import numpy as np
@@ -33,6 +34,7 @@ def find_closest(
     value_array: ArrayLike,
     reference_array: ArrayLike,
     is_sorted: bool = False,
+    return_index: bool = False,
 ) -> NDArray:
     """
     Find value in reference_array that is clostest to value in value_array.
@@ -46,11 +48,14 @@ def find_closest(
     is_sorted : bool, optional
         The reference array needs to be sorted. If False, sort array first. The
         default is False.
+    return_index: bool, optional
+        If True, return index of clostest value rather than clostest value itself. The
+        default is False.
 
     Returns
     -------
     NDArray
-        DESCRIPTION.
+        Clostest matching values or indices of clostest matching values.
 
     """
     value_array = np.asarray(value_array)
@@ -72,4 +77,40 @@ def find_closest(
         indices - 1,
         indices,
     )
+
+    if return_index:
+        return closest_index
     return reference_array[closest_index]
+
+
+@lru_cache(maxsize=8)
+def make_geomspace(
+    start: tuple | float,
+    stop: tuple | float,
+    num: int = 50,
+    **kwargs: Any,
+) -> ArrayLike:
+    """
+    Create geometric space using lru cache for efficiency. For this to work, input
+    needs to be hashable, meaning arrays need to be converted to tuples before passing
+
+    Parameters
+    ----------
+    start : tuple|float
+        The starting value of the sequence.
+    stop : tuple|float
+        The final value of the sequence, unless endpoint is False. In that case,
+        num + 1 values are spaced over the interval in log-space, of which all but
+        the last (a sequence of length num) are returned.
+    num : int, optional
+        Number of samples to generate. The default is 50.
+    **kwargs : Any
+        Additional arguments passed to np.geomspace.
+
+    Returns
+    -------
+    ArrayLike
+        num samples, equally spaced on a log scale.
+
+    """
+    return np.geomspace(start, stop, num, **kwargs)

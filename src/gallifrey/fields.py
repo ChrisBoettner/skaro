@@ -5,13 +5,11 @@ Created on Thu Mar  9 13:10:14 2023
 
 @author: chris
 """
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 from astropy.cosmology import Planck15
 from numpy.typing import NDArray
-from scipy.integrate import trapezoid
+from scipy.integrate import cumulative_trapezoid
 from scipy.interpolate import interp1d
 from yt.fields.derived_field import DerivedField
 from yt.fields.field_detector import FieldDetector
@@ -19,8 +17,9 @@ from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
 from gallifrey.planets import PlanetModel
-from gallifrey.stars import ChabrierIMF
+from gallifrey.stars import ChabrierIMF, StellarModel
 from gallifrey.utilities.logging import logger
+from gallifrey.utilities.structures import find_closest
 
 # create Logger
 logger = logger(__name__)
@@ -90,10 +89,12 @@ class Fields:
         category: str,
         host_star_masses: float | tuple[float, ...],
         planet_model: PlanetModel,
+        stellar_model: StellarModel,
         imf: ChabrierIMF,
         imf_bounds: tuple[float, float],
-        reference_age: Optional[int] = 100000000,
+        reference_age: int | None = 100000000,
         num_integral_points: int = 50,
+        only_mainsequence: bool = True,
     ) -> None:
         """
         Add number of planets of a given category associated with the star particle.
@@ -115,12 +116,15 @@ class Fields:
         planet_model : PlanetModel
             The planet model that associates a stellar particle properties
             with number of planets (of a given class).
+        stellar_model: StellarModel
+            Stellar Model, used to calculate lifetime of stars for upper integration
+            bound.
         imf : ChabrierIMF
             Stellar initial mass function of the star particles..
         imf_bounds : tuple[float, float]
             The range over with to integrate the imf. Corresponds to the mass range
             of stars considered.
-        reference_age : Optional[int], optional
+        reference_age : int | None, optional
             The age at which to evaluate the planet population model. The default is
             int(1e+8), i.e. 100Myr. If the value is None, the age of the star particle
             is used. (This is much slower and memory intensive.)
@@ -135,6 +139,13 @@ class Fields:
         def _planets(field: DerivedField, data: FieldDetector) -> NDArray:
             stellar_ages = data["stars", "stellar_age"].value
             metallicities = data["stars", "[Fe/H]"]
+            try:
+                number_of_stars = data["stars", "number"]
+            except KeyError:
+                raise KeyError(
+                    "['stars', 'number'] field does not exist. Create first "
+                    "using add_number_of_stars method."
+                )
 
             particle_masses = data["stars", "InitialMass"].to("Msun").value
 
@@ -159,8 +170,6 @@ class Fields:
                 planets_per_star = planet_model.prediction(
                     category, host_star_masses, variables_dataframe
                 )
-                # calculate number of stars
-                number_of_stars = imf.number_of_stars(particle_masses, *imf_bounds)
                 # calculate total number of planets
                 planets = planets_per_star.to_numpy()[:, 0] * number_of_stars
 
@@ -168,6 +177,11 @@ class Fields:
             elif isinstance(host_star_masses, tuple):
                 # sort masses for interpolation
                 sorted_masses = sorted(host_star_masses)
+                # calculate upper bound fro integration, maximum is upper limit of
+                # imf_bound, but if particle is old enough cut might need to be earler
+                # due to stars already going off main sequence
+                upper_bound = stellar_model.mass_from_lifetime(stellar_ages)
+                upper_bound[upper_bound > imf_bounds[1]] = imf_bounds[1]
 
                 # create integration space
                 m_space = np.geomspace(*imf_bounds, num_integral_points)
@@ -191,12 +205,20 @@ class Fields:
                 # mass of the star particle
                 imf_contribution = imf.number_density(particle_masses, m_space)
 
-                # numerical integration
-                planets = trapezoid(planets_per_star.T * imf_contribution, m_space)
+                # numerical integration:
+                # respect upper integration bound by integration to maximum, saving
+                # all steps and then taking the one clostest to the upper_limit
+                planets = cumulative_trapezoid(
+                    planets_per_star.T * imf_contribution, m_space, initial=0
+                )
+                closest_index_to_limit = find_closest(
+                    upper_bound, m_space, return_index=True
+                )
+                planets = planets[np.arange(planets.shape[0]), closest_index_to_limit]
 
             else:
                 raise ValueError(
-                    "ngpps_star_masses must either be number or a list of " "numbers."
+                    "ngpps_star_masses must either be number or a tuple of numbers."
                 )
 
             return self.ds.arr(planets, "1")
@@ -211,26 +233,47 @@ class Fields:
 
     def add_number_of_stars(
         self,
+        stellar_model: StellarModel,
         imf: ChabrierIMF,
-        imf_bounds: tuple[float, float] = (1, 1.04),
+        imf_bounds: tuple[float, float],
+        only_mainsequence: bool = True,
     ) -> None:
         """
         Add (number of) stars field to star particles.
 
         Parameters
         ----------
+        stellar_model: StellarModel
+            Stellar Model, used to calculate lifetime of stars for upper integration
+            bound.
         imf : ChabrierIMF
             Stellar initial mass function of the star particles.
-        imf_bounds : tuple[float, float], optional
+        imf_bounds : tuple[float, float]
             The range over with to integrate the imf. Corresponds to the mass range
-            of stars considered. The default is (1, 1.04).
-        """
+            of stars considered.
+        only_mainsequence: bool, optional
+            If True, only integrate IMF up to the mass where the stellar lifetime
+            matches the star particle age, i.e. only include main sequence stars. If
+            False, integrate up to the given upper IMF bound in all cases. The default
+            is True.
 
+        """
         self.check_star_properties()
 
         def _star_number(field: DerivedField, data: FieldDetector) -> NDArray:
+            if only_mainsequence:
+                # calculate upper bound based on star particle age and stellar
+                # lifetime
+                stellar_ages = data["stars", "stellar_age"].value
+                upper_bound = stellar_model.mass_from_lifetime(stellar_ages)
+                upper_bound[upper_bound > imf_bounds[1]] = imf_bounds[1]
+            else:
+                upper_bound = imf_bounds[1]
+
             particle_masses = data["stars", "InitialMass"].to("Msun").value
-            number_of_stars = imf.number_of_stars(particle_masses, *imf_bounds)
+            number_of_stars = imf.number_of_stars(
+                particle_masses, imf_bounds[0], upper_bound
+            )
             return self.ds.arr(number_of_stars, "1")
 
         self.ds.add_field(

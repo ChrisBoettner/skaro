@@ -31,7 +31,7 @@ def data_setup(
     sim_id: str = "09_18",
     ngpps_num_embryos: int = 50,
     ngpps_star_masses: float | tuple[float, ...] = 1,
-    lower_stellar_age_bound: float = 0.02,
+    star_age_bounds: tuple[float, float] = (0.02, np.inf),
     imf_delta: float = 0.05,
     planet_params: Optional[dict[str, Any]] = None,
 ) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel]:
@@ -58,7 +58,7 @@ def data_setup(
         available in ngpps_num_embryos = 50. The default is 1.
     star_age_bounds : tuple[float, float], optional
         The age range for star particles to be considered in the add_stars
-        command. The default is (0.02, 10).
+        command. The default is (0.02, np.inf).
     imf_delta : float, optional
         If ngpps_star_masses is a single number, the IMF is integrated in the range
         ((1-imf_delta_mass)*ngpps_star_mass, (1+imf_delta)*ngpps_star_masses). No effect
@@ -110,19 +110,15 @@ def data_setup(
                 "numbers."
             )
 
-        # create upper bound for star particle ages considered, based on lower IMF limit
-        upper_stellar_age_bound = stellar_model.lifetime(imf_bounds[0])
-        star_age_bounds = (lower_stellar_age_bound, upper_stellar_age_bound)
-
         logger.info(
             "STARS: 'stars' field derives from PartType4 field in age range: "
-            f"{[round(bound, 2) for bound in star_age_bounds]} Gyr."
+            f"{[np.round(bound, 2) for bound in star_age_bounds]} Gyr."
         )
 
         fields.convert_PartType4_properties()
         filters.add_stars(age_limits=star_age_bounds)
 
-        fields.add_number_of_stars(imf, imf_bounds=imf_bounds)
+        fields.add_number_of_stars(stellar_model, imf, imf_bounds=imf_bounds)
         fields.add_iron_abundance()
 
     # %%
@@ -136,6 +132,7 @@ def data_setup(
                 category,
                 ngpps_star_masses,
                 planet_model,
+                stellar_model,
                 imf,
                 imf_bounds,
                 **planet_params,
