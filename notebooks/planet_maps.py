@@ -24,7 +24,8 @@ def plot_maps(
     weight_field: Optional[tuple[str, str]] = None,
     colorbar_normalisation: str = "inidvidual",
     colorbar_percentiles: tuple[float, float] = (1, 99),
-    plot_width: tuple[float, str] = (43.3, "kpc"),
+    width: tuple[float, str] = (43.3, "kpc"),
+    depth: tuple[float, str] = (43.3, "kpc"),
     cmap: str = "kelp",
     figsize: tuple[float, float] = (18.5, 10.5),
     deposition_method: str = "cic",
@@ -52,8 +53,10 @@ def plot_maps(
         default is "inidvidual".
     colorbar_percentiles : tuple[float,float], optional
         DESCRIPTION. The default is (1, 99).
-    plot_width : tuple[float, str], optional
+    width : tuple[float, str], optional
         Plot limits for map. The default is (43.3, "kpc").
+    depth : tuple[float, str], optional
+        Depth of the projected, centered on domain center. The default is (43.3, "kpc").
     cmap : str, optional
         Colormap to use. The default is "kelp".
     figsize : tuple[float,float], optional
@@ -90,7 +93,8 @@ def plot_maps(
         ds=data,
         fields=fields,
         normal=normal,
-        width=plot_width,
+        width=width,
+        depth=depth,
         deposition=deposition_method,
         weight_field=weight_field,
         density=True,
