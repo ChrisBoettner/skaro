@@ -15,6 +15,7 @@ from yt import ParticleProjectionPlot
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
 from gallifrey.data.paths import Path
+from gallifrey.visualization.seaborn import get_palette
 
 
 def plot_maps(
@@ -26,7 +27,7 @@ def plot_maps(
     colorbar_percentiles: tuple[float, float] = (1, 99),
     width: tuple[float, str] = (43.3, "kpc"),
     depth: tuple[float, str] = (43.3, "kpc"),
-    cmap: str = "kelp",
+    cmap: Optional[str] = None,
     figsize: tuple[float, float] = (18.5, 10.5),
     deposition_method: str = "cic",
     density_unit: str = "1/pc**2",
@@ -58,7 +59,8 @@ def plot_maps(
     depth : tuple[float, str], optional
         Depth of the projected, centered on domain center. The default is (43.3, "kpc").
     cmap : str, optional
-        Colormap to use. The default is "kelp".
+        Colormap to use. The default is "None", which loads the color palette defined
+        in gallifrey.visualization.seaborn.
     figsize : tuple[float,float], optional
         Size of figure. The default is (18.5, 10.5).
     deposition_method : str, optional
@@ -82,6 +84,10 @@ def plot_maps(
         ParticleProjectionPlot and Figure object containing the figure.
 
     """
+    #
+    if cmap is None:
+        cmap = get_palette(as_cmap=True)
+
     # figure layout
     subplot_rows = np.ceil(len(planet_categories) / subplot_columns).astype(int)
 
@@ -147,7 +153,7 @@ def plot_maps(
             weight = weight_field[-1]
 
         fig.savefig(
-            Path().figures(f"planets/planet_map_{normal}_weight={weight}.pdf"),
+            Path().figures(f"HESTIA/planet_map_{normal}_weight={weight}.pdf"),
             bbox_inches="tight",
         )
     return plot, fig

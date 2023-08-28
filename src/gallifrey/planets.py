@@ -767,6 +767,13 @@ class PlanetModel:
             data_scaled = pd.DataFrame(scaler.transform(sample), columns=sample.columns)
             prediction_dataframe[category] = knn.predict(data_scaled)
 
+            # check if all values in category column are whole numbers, and if so
+            # convert to int data type
+            if prediction_dataframe[category].apply(float.is_integer).all():
+                prediction_dataframe[category] = prediction_dataframe[category].astype(
+                    int
+                )
+
         if return_full:
             return prediction_dataframe
         else:
