@@ -6,7 +6,7 @@ Created on Mon Aug 28 14:24:24 2023
 @author: chris
 """
 import os
-from typing import Any
+from typing import Any, Optional
 
 import seaborn as sns
 from matplotlib import rc
@@ -98,7 +98,7 @@ class SeabornFigure:
         # align y labels
         self.seaborn_plot.figure.align_ylabels()
 
-    def save(self, file_name: str) -> None:
+    def save(self, file_name: str, sub_directory: Optional[str] = None) -> None:
         """
         Save figure in figures directory.
 
@@ -106,9 +106,15 @@ class SeabornFigure:
         ----------
         file_name : str
             Name and relative path of file in figures directory.
+        sub_directory : Optional[str], optional
+            Name of directory within figure directory. The default is None.
 
         """
-        path = Path().figures(f"{file_name}")
+
+        if sub_directory:
+            path = Path().figures(f"{sub_directory}/{file_name}")
+        else:
+            path = Path().figures(f"{file_name}")
 
         # create directory if it doesn't exist already
         if not os.path.exists(os.path.dirname(path)):

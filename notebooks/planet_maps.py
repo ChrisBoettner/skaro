@@ -5,12 +5,14 @@ Created on Fri Jun  9 13:21:08 2023
 
 @author: chris
 """
+import os
 import warnings
 from typing import Any, Optional
 
 import numpy as np
 import yt
 from matplotlib.pyplot import Axes, Figure
+from numpy.typing import ArrayLike
 from yt import ParticleProjectionPlot
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
@@ -35,6 +37,7 @@ def plot_maps(
     subplot_columns: int = 3,
     subplot_pad: float | tuple[float, float] = (0, 0),
     save: bool = False,
+    figure_name_addon: Optional[str] = None,
 ) -> tuple[ParticleProjectionPlot, Figure]:
     """
     Create maps of planet distributions
@@ -77,6 +80,8 @@ def plot_maps(
         Padding between subplots. The default is 1.
     save : bool, optional
         If True, save figure to Figures directory. The default is False.
+    figure_name_addon : str, optional
+        Optional addon to default figure name. The default is None.
 
     Returns
     -------
@@ -152,11 +157,57 @@ def plot_maps(
         else:
             weight = weight_field[-1]
 
+        file_name = f"HESTIA/planet_map_{normal}_weight={weight}.pdf"
+        if figure_name_addon:
+            file_name = (
+                f"HESTIA/planet_map_{normal}_weight={weight}_"
+                f"{figure_name_addon}.pdf"
+            )
+        else:
+            file_name = f"HESTIA/planet_map_{normal}_weight={weight}.pdf"
+        path = Path().figures(f"{file_name}")
+
+        # create directory if it doesn't exist already
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+
         fig.savefig(
-            Path().figures(f"HESTIA/planet_map_{normal}_weight={weight}.pdf"),
+            path,
             bbox_inches="tight",
         )
     return plot, fig
+
+
+def figure_name_formatting(
+    host_star_masses: int | float | tuple | list | np.ndarray,
+) -> str:
+    """
+    Create appropriate figure naming scheme dependent on input host_star_masses variable
+    type.
+
+    Parameters
+    ----------
+    host_star_masses : int | float | tuple | list | np.ndarray
+        The masses of host star considered.
+
+    Returns
+    -------
+    str
+        Formatted naming scheme addon.
+
+    """
+
+    match host_star_masses:
+        case int() | float():
+            return f"masses={host_star_masses}"
+        case tuple() | list() | np.ndarray():
+            min_mass = np.amin(host_star_masses)
+            max_mass = np.amax(host_star_masses)
+            return f"masses={min_mass}-{max_mass}"
+        case _:
+            raise ValueError(
+                "host_star_masses must either be a number of a list of " "numbers."
+            )
 
 
 def plot_configurations(

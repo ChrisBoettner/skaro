@@ -177,7 +177,7 @@ class Systems:
 
         # create variable dataframe
         self.variables = self.load_system_variables(population_id)
-        self.variable_names = list(self.variables.columns)
+        self.variable_names = tuple(self.variables.columns)
 
         # get variable bounds (upper and lower value in sample)
         self.bounds = self.variable_bounds()
@@ -270,9 +270,11 @@ class Systems:
 
         """
         # gas mass scales linearly with star mass
-        system_variables["log_initial_mass"] -= np.log10(host_star_mass)
+        if "log_initial_mass" in system_variables:
+            system_variables["log_initial_mass"] -= np.log10(host_star_mass)
         # inner edge scales with (star mass)^1/3
-        system_variables["log_inner_edge"] -= 1 / 3 * np.log10(host_star_mass)
+        if "log_inner_edge" in system_variables:
+            system_variables["log_inner_edge"] -= 1 / 3 * np.log10(host_star_mass)
         return system_variables
 
     def variable_bounds(self) -> dict[str, tuple[float, float]]:
@@ -307,7 +309,7 @@ class Systems:
     def sample_distribution(
         self,
         num: int,
-        included_variables: Optional[list[str]] = None,
+        included_variables: Optional[tuple[str, ...]] = None,
     ) -> pd.DataFrame:
         """
         Sample variable distribtuions. The parameter included_variables can be used to
@@ -317,8 +319,8 @@ class Systems:
         ----------
         num : int
             Number if samples.
-        included_variables : Optional[list[str]], optional
-            Names of variables included in the calucation. The default is None, which
+        included_variables : Optional[tuple[str, ...]], optional
+            Names of variables included in the calculation. The default is None, which
             includes all variables.
 
         Returns
@@ -343,7 +345,7 @@ class Systems:
     def pdf(
         self,
         variable_values: ArrayLike,
-        included_variables: Optional[list[str]] = None,
+        included_variables: Optional[tuple[str, ...]] = None,
         multiply: bool = True,
     ) -> pd.DataFrame | NDArray:
         """
@@ -357,8 +359,8 @@ class Systems:
         variable_values : ArrayLike
             Input values for the distributions (must have same length as distributions
             dict).
-        included_variables : Optional[list[str]], optional
-            Names of variables included in the calucation. The default is None, which
+        included_variables : Optional[tuple[str, ...]], optional
+            Names of variables included in the calculation. The default is None, which
             includes all variables.
         multiply : bool, optional
             Choose if individual pdf values should be multiplied to obtain the value
@@ -584,6 +586,7 @@ class PlanetModel:
         self,
         category: str,
         population_id: str,
+        included_variables: Optional[tuple[str]] = None,
         ages: Optional[tuple[int, ...] | int] = None,
         neighbors: int = 3,
         weights: str = "uniform",
@@ -598,6 +601,9 @@ class PlanetModel:
             Category that is matched to system variables.
         population_id : str
             Name of the population run.
+        included_variables : Optional[tuple[str]], optional
+            Names of variables included in the calculation. The default is None, which
+            includes all variables.
         ages : Optional[tuple[int, ...]] | int], optional
             A list of snapshot ages to include in the interpolation. The default is
             None, which includes every age found in available_ages.
@@ -643,9 +649,13 @@ class PlanetModel:
         # define KNN regressor
         knn = KNeighborsRegressor(n_neighbors=neighbors, weights=weights, **kwargs)
 
+        # prepare input data
+        input_data = data.drop(columns=category)
+        if included_variables:
+            input_data = input_data[list(included_variables) + ["age"]]
+
         # scale input data before passing it to the regressor
         scaler = StandardScaler()
-        input_data = data.drop(columns=category)
         data_scaled = pd.DataFrame(
             scaler.fit_transform(input_data),
             columns=input_data.columns,
@@ -663,6 +673,7 @@ class PlanetModel:
         categories: str | list,
         host_star_mass: float,
         variables: Optional[pd.DataFrame] = None,
+        included_variables: Optional[tuple[str]] = None,
         ages: Optional[tuple[int, ...] | int] = None,
         return_full: bool = False,
         num_samples: int = 5000,
@@ -688,6 +699,10 @@ class PlanetModel:
             DataFrame of variables to be used in the prediction, the remaining variables
             are sampled from variable distributions. The default is None, which means
             all parameter are sampled from distribution.
+        included_variables : Optional[tuple[str]], optional
+            Names of variables included in the calculation. If variables is not None,
+            all variable names in the variables dataframe must be also in
+            included_variables. The default is None, which includes all variables.
         ages : Optional[tuple[int, ...]] | int], optional
             A list of snapshot ages to include in the interpolation. The default is
             None, in that case the relevant ages are inferred from the age column
@@ -729,8 +744,8 @@ class PlanetModel:
                 "embryo number and host star mass exists?"
             )
 
-        # check if ages column exists if not given and set number of samples
         if variables is not None:
+            # check if ages column exists and set number of samples
             if "age" not in variables.columns:
                 raise ValueError("variables dataframe needs to contain column 'age'.")
 
@@ -739,8 +754,22 @@ class PlanetModel:
         # get systems
         systems = self.get_systems(population_id)
         # sample the system variable distributions amd scale according to host mass
-        sample = systems.sample_distribution(num_samples)
+        sample = systems.sample_distribution(
+            num_samples, included_variables=included_variables
+        )
         sample = systems.scale_variables(sample, host_star_mass)
+
+        # check if included_variables matches requirements
+        if included_variables is not None:
+            if not isinstance(included_variables, tuple):
+                raise ValueError(
+                    "included_variables must be tuple " "(needed for hashing)."
+                )
+            if not set(included_variables).issubset(set(systems.variable_names)):
+                raise ValueError(
+                    "included_variables must be subset of "
+                    f" {systems.variable_names}."
+                )
 
         # if variables dataframe does not exist, set default age
         # otherwise if it exists, overwrite sample columns with columns given by
@@ -749,6 +778,16 @@ class PlanetModel:
             sample["age"] = default_age
         else:
             for column in variables.columns:
+                if included_variables is not None:
+                    if (column == "age") or (column in included_variables):
+                        pass
+                    else:
+                        raise ValueError(
+                            f"{column!r}-column found in 'variables' "
+                            "dataframe but not part of "
+                            "'included_variables'."
+                        )
+
                 # match on same index, otherwise matching error can occur
                 sample[column] = variables.reset_index(drop=True)[column]
 
@@ -761,7 +800,11 @@ class PlanetModel:
         prediction_dataframe = sample.copy()
         for category in categories:
             knn, scaler = self.get_planet_function(
-                category, population_id, ages=ages, **kwargs
+                category=category,
+                population_id=population_id,
+                included_variables=included_variables,
+                ages=ages,
+                **kwargs,
             )
             # scale data with same scaler used for fitting KNN
             data_scaled = pd.DataFrame(scaler.transform(sample), columns=sample.columns)
