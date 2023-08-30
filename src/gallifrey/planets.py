@@ -16,7 +16,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
 
 from gallifrey.data.paths import Path
-from gallifrey.utilities.structures import find_closest
+from gallifrey.utilities.structures import find_closest, make_meshgrid
 
 
 class Population:
@@ -306,6 +306,63 @@ class Systems:
         }
         return bounds_dict
 
+    def variable_grid(
+        self,
+        num_bins: int,
+        included_variables: Optional[tuple[str, ...]] = None,
+        custom_bounds: Optional[dict[str, tuple]] = None,
+        as_dataframe: bool = False,
+    ) -> list[np.ndarray] | pd.DataFrame:
+        """
+        Create a equally spaced meshgrid of the variables between the variable bounds.
+        The parameter included_variables can be used to choose the variables.
+        If custom bounds are needed, they can be passed directly as a list of 2-tuples,
+        which make up the lower and upper bounds, respectively.
+
+        Parameters
+        ----------
+        num_bins : int
+            Number of bins for all dimensions.
+        included_variables : Optional[tuple[str, ...]], optional
+            Names of variables included in the calculation. The default is None, which
+            includes all variables.
+         custom_bounds : Optional[dict[str, tuple]],  optional
+             A dictonary of custom bound to create the meshgrid from. The key must be
+             the variable name and the value a 2-tuple of (lower_bound, upper_bound).
+             If this parameter is passed included_variables is ignored. The default is
+             None, which then uses the variable bounds stored as attributes.
+        as_dataframe: bool, optional
+            If True, return a dataframe of coordinate pairs, rather than meshgrid. The
+            default is False.
+
+        Returns
+        -------
+        list[np.ndarray]
+            The list of arrays that make up the meshgrid if as_list is False. If
+            as_dataframe is True, returns dataframe of coordinate pairs instead.
+
+        """
+        if included_variables is None:
+            included_variables = self.variable_names
+
+        # get bounds of included variable
+        if custom_bounds:
+            bounds = custom_bounds
+        else:
+            bounds = {
+                variable: self.bounds[variable] for variable in included_variables
+            }
+
+        # create meshgrid
+        meshgrid = make_meshgrid(
+            bounds.values(), num_bins=num_bins, as_list=as_dataframe
+        )
+
+        if as_dataframe:
+            # turn coordinate pairs into dataframe
+            meshgrid = pd.DataFrame(meshgrid, columns=bounds.keys())
+        return meshgrid
+
     def sample_distribution(
         self,
         num: int,
@@ -588,7 +645,7 @@ class PlanetModel:
         population_id: str,
         included_variables: Optional[tuple[str]] = None,
         ages: Optional[tuple[int, ...] | int] = None,
-        neighbors: int = 3,
+        neighbors: int = 30,
         weights: str = "uniform",
         **kwargs: Any,
     ) -> tuple[KNeighborsRegressor, StandardScaler]:
@@ -608,7 +665,7 @@ class PlanetModel:
             A list of snapshot ages to include in the interpolation. The default is
             None, which includes every age found in available_ages.
         neighbors : int, optional
-            Number of neighbors to use in the KNN regression. The default is 3.
+            Number of neighbors to use in the KNN regression. The default is 30.
         weights : str, optional
             Weight function to use in prediction for KNN regression. he default is
             'uniform'.
@@ -747,8 +804,7 @@ class PlanetModel:
         if variables is not None:
             # check if ages column exists and set number of samples
             if "age" not in variables.columns:
-                raise ValueError("variables dataframe needs to contain column 'age'.")
-
+                variables["age"] = default_age
             num_samples = len(variables)
 
         # get systems

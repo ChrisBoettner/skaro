@@ -114,3 +114,41 @@ def make_geomspace(
 
     """
     return np.geomspace(start, stop, num, **kwargs)
+
+
+def make_meshgrid(
+    bounds: list[tuple],
+    num_bins: int = 10,
+    as_list: bool = False,
+) -> list[np.ndarray]:
+    """
+    Make meshgrid based on list of bounds. bounds must be a list of 2-tuples, where
+    the first value is the lower bound and the second value is the upper bound.
+
+    Parameters
+    ----------
+    bounds : list[tuple]
+        List of bounds to create the grid from.
+    num_bins : int, optional
+        Number of bins for all dimensions. The default is 10.
+    as_list : bool, optional
+        If True, return a array of coordinate pairs, rather than meshgrid. The
+        default is False.
+
+    Returns
+    -------
+    meshgrid : list[np.ndarray]
+        The list of arrays that make up the meshgrid if as_list is False. If as_list
+        is True, returns list of coordinate pairs.
+
+    """
+    # create linspaces from bounds
+    ranges = [np.linspace(b[0], b[1], num_bins) for b in bounds]
+
+    # create the meshgrid
+    meshgrid = np.meshgrid(*ranges)
+
+    if as_list:
+        # convert to list of coordinate pairs
+        meshgrid = list(np.column_stack([m.ravel() for m in meshgrid]))
+    return meshgrid

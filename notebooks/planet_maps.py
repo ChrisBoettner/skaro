@@ -12,7 +12,6 @@ from typing import Any, Optional
 import numpy as np
 import yt
 from matplotlib.pyplot import Axes, Figure
-from numpy.typing import ArrayLike
 from yt import ParticleProjectionPlot
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
