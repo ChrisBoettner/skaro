@@ -37,12 +37,12 @@ def rename_labels(
 
     if mapping_dict is None:
         mapping_dict = {
-            "log_initial_mass": r"log $M_\mathrm{g}$",
+            "log_initial_mass": r"log $M_\mathrm{g}$ [$M_\odot$]",
             "[Fe/H]": "[Fe/H]",
-            "log_photoevaporation": r"log $\dot{M}_\mathrm{wind}$",
-            "log_inner_edge": r"log $r_\mathrm{in}$",
+            "log_inner_edge": r"log $r_\mathrm{in}$ [AU]",
+            "log_photoevaporation": r"log $\dot{M}_\mathrm{wind}$ [$M_\odot$/yr]",
         }
 
     dataframe = dataframe.rename(columns=mapping_dict)
-    labels = [label for label in mapping_dict.values() if label in dataframe.columns]
+    labels = [label for label in dataframe.columns if label in mapping_dict.values()]
     return dataframe, labels

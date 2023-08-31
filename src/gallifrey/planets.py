@@ -233,7 +233,7 @@ class Systems:
         )  # paper Eq. 1
         # metallicity
         system_variables["[Fe/H]"] = np.log10(
-            raw_variables["fpg"] / 0.0149
+            raw_variables["fpg"] / 0.0149  # solar dust-to-gas ratio
         )  # paper Eq. 2
         # inner edge
         system_variables["log_inner_edge"] = np.log10(raw_variables["ain"])
