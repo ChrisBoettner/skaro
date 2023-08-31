@@ -310,7 +310,7 @@ class Systems:
         self,
         num_bins: int,
         included_variables: Optional[tuple[str, ...]] = None,
-        custom_bounds: Optional[dict[str, tuple]] = None,
+        custom_bounds: Optional[dict[str, tuple[float, float]]] = None,
         as_dataframe: bool = False,
     ) -> list[np.ndarray] | pd.DataFrame:
         """
@@ -329,8 +329,6 @@ class Systems:
          custom_bounds : Optional[dict[str, tuple]],  optional
              A dictonary of custom bound to create the meshgrid from. The key must be
              the variable name and the value a 2-tuple of (lower_bound, upper_bound).
-             If this parameter is passed included_variables is ignored. The default is
-             None, which then uses the variable bounds stored as attributes.
         as_dataframe: bool, optional
             If True, return a dataframe of coordinate pairs, rather than meshgrid. The
             default is False.
@@ -346,12 +344,16 @@ class Systems:
             included_variables = self.variable_names
 
         # get bounds of included variable
+        bounds = {variable: self.bounds[variable] for variable in included_variables}
         if custom_bounds:
-            bounds = custom_bounds
-        else:
-            bounds = {
-                variable: self.bounds[variable] for variable in included_variables
-            }
+            if not set(custom_bounds.keys()).issubset(included_variables):
+                raise ValueError(
+                    "All custom_bounds keys must be in " "included_variables."
+                )
+            for variable in custom_bounds.keys():
+                if not isinstance(custom_bounds, dict):
+                    raise ValueError("custom_bounds must be a dictionary.")
+                bounds[variable] = custom_bounds[variable]
 
         # create meshgrid
         meshgrid = make_meshgrid(
@@ -730,8 +732,9 @@ class PlanetModel:
         categories: str | list,
         host_star_mass: float,
         variables: Optional[pd.DataFrame] = None,
-        included_variables: Optional[tuple[str]] = None,
+        included_variables: Optional[tuple[str, ...]] = None,
         ages: Optional[tuple[int, ...] | int] = None,
+        hard_bounds: bool = False,
         return_full: bool = False,
         num_samples: int = 5000,
         default_age: int = 100000000,
@@ -764,14 +767,17 @@ class PlanetModel:
             A list of snapshot ages to include in the interpolation. The default is
             None, in that case the relevant ages are inferred from the age column
             of the variables dataframe.
+        hard_bounds: bool, optional
+            If True, predictions for variables outside of variable bounds (as given
+            in Systems object) are set to zero.
         return_full : bool, optional
             If True, return the full DataFrame (variables + prediction). Otherwise,
             return only the category column (i.e. the prediction).
-        num_samples: int
+        num_samples: int, optional
             If variables dataframe is None, use this many samples from distribution.
             Otherwise number of samples is inferred from shape of variables dataframe.
             The default is 5000.
-        default_age: int
+        default_age: int, optional
             The default age to assign to the population if the variables dataframe is
             None. Otherwise, age is inferred from age column of variables dataframe.
             The default is 100000000, i.e. 100Myr.
@@ -809,11 +815,6 @@ class PlanetModel:
 
         # get systems
         systems = self.get_systems(population_id)
-        # sample the system variable distributions amd scale according to host mass
-        sample = systems.sample_distribution(
-            num_samples, included_variables=included_variables
-        )
-        sample = systems.scale_variables(sample, host_star_mass)
 
         # check if included_variables matches requirements
         if included_variables is not None:
@@ -826,6 +827,17 @@ class PlanetModel:
                     "included_variables must be subset of "
                     f" {systems.variable_names}."
                 )
+        else:
+            # if include_variables is None, set to all variables
+            included_variables = systems.variable_names
+        assert isinstance(included_variables, tuple)
+
+        # sample the system variable distributions amd scale according to host mass
+        sample = systems.sample_distribution(
+            num_samples,
+            included_variables=included_variables,
+        )
+        sample = systems.scale_variables(sample, host_star_mass)
 
         # if variables dataframe does not exist, set default age
         # otherwise if it exists, overwrite sample columns with columns given by
@@ -852,8 +864,17 @@ class PlanetModel:
         if ages is None:
             ages = tuple(np.unique(find_closest(sample["age"], self.available_ages)))
 
+        # check for rows where all variables are within bounds
+        within_bounds = [
+            sample[variable].between(*systems.bounds[variable])
+            for variable in included_variables
+        ]
+        all_within_bounds = pd.concat(within_bounds, axis=1).all(axis=1)
+
         # Get the KNN model and predict the category
         prediction_dataframe = sample.copy()
+        prediction_dataframe["out_of_bounds_flag"] = ~all_within_bounds
+
         for category in categories:
             knn, scaler = self.get_planet_function(
                 category=category,
@@ -862,9 +883,15 @@ class PlanetModel:
                 ages=ages,
                 **kwargs,
             )
-            # scale data with same scaler used for fitting KNN
+            # scale data with same scaler used for fitting KNN and predict values
             data_scaled = pd.DataFrame(scaler.transform(sample), columns=sample.columns)
             prediction_dataframe[category] = knn.predict(data_scaled)
+
+            # if hard_bounds, set predictions outside of variable bounds to zero
+            if hard_bounds:
+                prediction_dataframe.loc[
+                    prediction_dataframe["out_of_bounds_flag"], category
+                ] = 0
 
             # check if all values in category column are whole numbers, and if so
             # convert to int data type
