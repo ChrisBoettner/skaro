@@ -200,7 +200,9 @@ class Systems:
                     raise ValueError(f"{variable_name!r} is not a valid variable name.")
                 self.distributions[variable_name] = function
 
-    def load_system_variables(self, population_id: str) -> pd.DataFrame:
+    def load_system_variables(
+        self, population_id: str, solar_gas_to_dust: float = 0.0149
+    ) -> pd.DataFrame:
         """
         Loads system monte carlo variables as provided by Emsenhuber. Rescale according
         to host star mass following paper IV (Burn2021).
@@ -209,6 +211,9 @@ class Systems:
         ----------
         population_id : str
             Name of population id to retrieve system data for.
+        solar_gas_to_dust : float, optional
+            Gas-to-dust ratio of sun, used to convert gas-to-dust ratio to [Fe/H].
+            The default is 0.0149, which is the value used in NGPPS paper II.
 
         Raises
         ------
@@ -233,7 +238,7 @@ class Systems:
         )  # paper Eq. 1
         # metallicity
         system_variables["[Fe/H]"] = np.log10(
-            raw_variables["fpg"] / 0.0149  # solar dust-to-gas ratio
+            raw_variables["fpg"] / solar_gas_to_dust
         )  # paper Eq. 2
         # inner edge
         system_variables["log_inner_edge"] = np.log10(raw_variables["ain"])
@@ -639,6 +644,62 @@ class PlanetModel:
 
         """
         return Systems(population_id)
+
+    @staticmethod
+    def calculate_solid_mass(
+        dataframe: pd.DataFrame,
+        solar_gas_to_dust: float = 0.0149,
+        solar_mass_in_jupiter_masses: float = 1047.57,
+        return_full: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Calculate solid disc mass from [Fe/H] and log_initial_mass according to
+        NGPPS paper II, values in Jupiter masses.
+
+        Parameters
+        ----------
+        dataframe : pd.DataFrame
+            Input dataframe containing [Fe/H] and log_initial_mass.
+        solar_gas_to_dust : float, optional
+            Gas-to-dust ratio of sun, used to convert gas-to-dust ratio to [Fe/H].
+            The default is 0.0149, which is the value used in NGPPS paper II.
+        solar_mass_in_jupiter_masses: float, optional
+            Solar mass in Jupiter masses, for conversion. The default is 1047.57 .
+        return_full : bool, optional
+            If True, return the full DataFrame (inpit dataframe + log_solid_mass).
+            Otherwise, return only the log_solid_mass column.
+
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the disc mass values.
+
+        """
+
+        if not {"log_initial_mass", "[Fe/H]"}.issubset(dataframe.columns):
+            raise ValueError(
+                "To calculate disc solid mass, dataframe must contain "
+                "columns 'log_initial_mass' and '[Fe/H]'."
+            )
+
+        # calculate solid disc mass according to NGPPS paper ||
+        log_solid_mass = (
+            dataframe["[Fe/H]"]
+            + dataframe["log_initial_mass"]
+            + np.log10(solar_gas_to_dust)
+        )
+
+        # convert from solar masses to Jupiter masses
+        log_solid_mass += np.log10(solar_mass_in_jupiter_masses)
+
+        # add to dataframe
+        dataframe["log_solid_mass"] = log_solid_mass
+
+        if return_full:
+            return dataframe
+        else:
+            dataframe["log_solid_mass"]
 
     @methodtools.lru_cache(maxsize=512)
     def get_planet_function(

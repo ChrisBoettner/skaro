@@ -6,7 +6,7 @@ Created on Mon Aug 28 14:24:24 2023
 @author: chris
 """
 import os
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -28,9 +28,10 @@ def set_plot_defaults() -> None:
 
     """
     sns.set_theme(
+        context="paper",
         style="whitegrid",
         palette="pastel",
-        font_scale=2,
+        font_scale=2.7,
         rc={
             "figure.figsize": (18.5, 10.5),
             "axes.grid": False,
@@ -45,8 +46,9 @@ def get_palette(
     n_colors: int = 6,
     start: float = 0,
     rot: float = 0.4,
-    reverse: bool = False,
+    diverging: bool = False,
     as_cmap: bool = False,
+    second_palette_start: float = 1.65,
     **kwargs: Any,
 ) -> _ColorPalette | ListedColormap:
     """
@@ -60,14 +62,17 @@ def get_palette(
         The hue value at the start of the helix. The default is -.2.
     rot : float, optional
         Rotations around the hue wheel over the range of the palette. The default is
-        0.6.
-    reverse: bool, optional
-        If True, the palette will go from dark to light. The default is False.
+        0.4 .
+    diverging : bool, optional
+        If True, create a diverging colormap. The default is False.
     as_cmap: bool, optional
         If True, colormap is returned as matplotlib ListedColormap object. Otherwise
-        its a seaborn ColorPalette. The default is False
+        its a seaborn ColorPalette. The default is False.
+    second_palette_start : float, optional
+        Starting point for second part of colormap, if diverging is True. The default
+        is 1.65 .
     **kwargs : Any
-        Additional parameter.
+        Additional parameters for cubehelix_palette. Ignored if diverging is True.
 
     Returns
     -------
@@ -75,14 +80,45 @@ def get_palette(
         Return colormap either as seaborn color palette or matplotlib colormap.
 
     """
-    return sns.cubehelix_palette(
-        n_colors=n_colors,
-        start=start,
-        rot=rot,
-        reverse=reverse,
-        as_cmap=as_cmap,
-        **kwargs,
-    )
+
+    if not diverging:
+        return sns.cubehelix_palette(
+            n_colors=n_colors,
+            start=start,
+            rot=rot,
+            as_cmap=as_cmap,
+            **kwargs,
+        )
+
+    # for diverging colormap, create two maps and combine them
+    else:
+        # if output is ListedColormap, use max number of colors
+        if as_cmap:
+            n_colors = 256
+
+        # create palettes
+        palette_one = sns.cubehelix_palette(
+            n_colors=(
+                n_colors // 2 if n_colors % 2 else n_colors // 2 + 1
+            ),  # odd number handling
+            start=second_palette_start,
+            rot=rot,
+            light=0.95,
+            as_cmap=False,
+            reverse=True,
+        )
+        palette_two = sns.cubehelix_palette(
+            n_colors=n_colors // 2,
+            start=start,
+            rot=rot,
+            light=0.95,
+            as_cmap=False,
+        )
+        diverging_palette = palette_one + palette_two
+
+        if as_cmap:
+            return ListedColormap(diverging_palette)
+        return diverging_palette
 
 
 class FigureProcessor:
@@ -147,14 +183,17 @@ def contour_plot(
     y: str,
     hue: str,
     reshaping_bins: int,
+    additional_contours: Optional[str] = None,
     cmap: Optional[ListedColormap] = None,
     colorbar_label: Optional[str] = None,
     square_aspect_ratio: bool = False,
     outline: bool = False,
     prune_lowest: bool = False,
     background_color: str = "black",
+    contour_label_fmt: str | Callable = "%1.1f",
     kws: Optional[dict[str, Any]] = None,
     okws: Optional[dict[str, Any]] = None,
+    ackws: Optional[dict[str, Any]] = None,
 ) -> tuple[Figure, list[Axes]]:
     """
     Create contour plot from dataframe. The x- and y-columns should be the variable
@@ -185,10 +224,15 @@ def contour_plot(
         is False.
     background_color: str, optional
         The plot background color. The default is black.
+    contour_label_fmt: str | Callable, optional
+        Label formatter for additional contours. The default is  "%1.1f", which return
+        values with one decimal.
     kws : dict[str, Any]
         Dict of optional parameters passed to plt.contourf.
     okws : dict[str, Any]
         Dict of optional parameters passed to plt.contour, for outlines.
+    ackws : dict[str, Any]
+        Dict of optional parameters passed to plt.contour, for additional contours.
 
     Returns
     -------
@@ -213,7 +257,7 @@ def contour_plot(
         figsize = 2 * [1.2 * min(figsize)]
 
     # prune lowest values if True by adding appropriate keyword
-    for keywords in [kws, okws]:
+    for keywords in [kws, okws, ackws]:
         keywords = {} if keywords is None else keywords
         if prune_lowest and ("locator" not in keywords.keys()):
             keywords["locator"] = ticker.MaxNLocator(prune="lower")
@@ -226,6 +270,7 @@ def contour_plot(
         width_ratios=[16, 1],
         height_ratios=[1, 8],
         hspace=0,
+        wspace=0,
     )
 
     # add main contour plot
@@ -239,6 +284,7 @@ def contour_plot(
     cbar_ax = fig.add_subplot(gs[1, 1])
     cbar = fig.colorbar(contour, cax=cbar_ax)
     cbar.set_label(hue if colorbar_label is None else colorbar_label)
+    cbar.outline.set_visible(False)
 
     # add top histogram by summing over y axis
     histogram_ax = fig.add_subplot(gs[0, 0], sharex=contour_ax)
@@ -251,6 +297,12 @@ def contour_plot(
     # add outline
     if outline:
         contour = contour_ax.contour(xx, yy, zz, cmap=cmap, **okws)
+
+    if additional_contours is not None:
+        ww = data[additional_contours].to_numpy().reshape(2 * [reshaping_bins])
+
+        additional_contours = contour_ax.contour(xx, yy, ww, **ackws)
+        contour_ax.clabel(additional_contours, inline=True, fmt=contour_label_fmt)
 
     # adapt layout
     fig.tight_layout()

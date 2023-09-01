@@ -40,7 +40,10 @@ def rename_labels(
             "log_initial_mass": r"log $M_\mathrm{g}$ [$M_\odot$]",
             "[Fe/H]": "[Fe/H]",
             "log_inner_edge": r"log $r_\mathrm{in}$ [AU]",
-            "log_photoevaporation": r"log $\dot{M}_\mathrm{wind}$ [$M_\odot$/yr]",
+            "log_photoevaporation": (
+                r"log $\dot{M}_\mathrm{wind}$ [$\frac{M_\odot}{\mathrm{yr}}$]"
+            ),
+            "log_solid_mass": r"log $M_\mathrm{s}$ [$M_\mathrm{Jupiter}$]",
         }
 
     dataframe = dataframe.rename(columns=mapping_dict)
