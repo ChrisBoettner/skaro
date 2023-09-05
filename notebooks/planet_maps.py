@@ -90,7 +90,7 @@ def plot_maps(
     """
     #
     if cmap is None:
-        cmap = get_palette(as_cmap=True)
+        cmap = get_palette(rot=0.6, as_cmap=True, reverse=True)
 
     # figure layout
     subplot_rows = np.ceil(len(planet_categories) / subplot_columns).astype(int)
@@ -254,6 +254,7 @@ def plot_configurations(
             plot.set_colorbar_label(
                 field, r"Surface Density $\left(1/\mathrm{pc}^2\right)$"
             )
+        plot.set_background_color(field, "black")
         plot.set_figure_size(figsize)
         plot.set_font(fontdict)
 
@@ -422,7 +423,7 @@ def filter_subplot_axes(fig: Figure) -> list[Axes]:
             (ax.get_xlim()[1] - ax.get_xlim()[0])
             / (ax.get_ylim()[1] - ax.get_ylim()[0])
         )
-        if not (0.99 < aspect_ratio < 1.01):
+        if not (0.1 < aspect_ratio < 10):
             continue
         else:
             axes.append(ax)
