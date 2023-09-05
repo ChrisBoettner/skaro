@@ -183,6 +183,7 @@ def contour_plot(
     y: str,
     hue: str,
     reshaping_bins: int,
+    bin_window: int = 1,
     additional_contours: Optional[str] = None,
     cmap: Optional[ListedColormap] = None,
     colorbar_label: Optional[str] = None,
@@ -211,6 +212,8 @@ def contour_plot(
         Name of column containing the z values.
     reshaping_bins : int
         Number of bins of underlying grid, needed to reconstruct meshgrid.
+    bin_window : int, optional
+        Choose how many bins are combined into single bar of top barplot.
     cmap : Optional[ListedColormap], optional
         The colormap to be used. The default is None.
     colorbar_label : Optional[str], optional
@@ -246,9 +249,12 @@ def contour_plot(
         data[key].to_numpy().reshape(2 * [reshaping_bins]) for key in (x, y, hue)
     ]
 
-    # calculate histogram
-    x_range = xx[0, :]
+    # calculate barplot
+    if (reshaping_bins % bin_window) != 0:
+        raise ValueError("reshaping_bins must be divisible by bin_windows.")
+    x_range = xx[0, ::bin_window]
     z_sum = np.sum(zz, axis=0)
+    bin_values = np.sum(z_sum.reshape(-1, bin_window), axis=1)  # combine bins
     bar_width = x_range[1] - x_range[0]
 
     # choose aspect ratio / figure size
@@ -288,9 +294,11 @@ def contour_plot(
 
     # add top histogram by summing over y axis
     histogram_ax = fig.add_subplot(gs[0, 0], sharex=contour_ax)
-    norm = Normalize(vmin=0, vmax=max(z_sum))  # normalizer for bar colors
-    color = "black" if cmap is None else cmap(norm(z_sum))  # colors based on bar values
-    histogram_ax.bar(x_range, z_sum, width=bar_width, align="edge", color=color)
+    norm = Normalize(vmin=0, vmax=max(1.1 * bin_values))  # normalizer for bar colors
+    color = (
+        "black" if cmap is None else cmap(norm(bin_values))
+    )  # colors based on bar values
+    histogram_ax.bar(x_range, bin_values, width=bar_width, align="edge", color=color)
     histogram_ax.set_xlim(x_range[0], x_range[-1])
     histogram_ax.axis("off")
 
