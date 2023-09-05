@@ -16,7 +16,7 @@ from yt import ParticleProjectionPlot
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
 from gallifrey.data.paths import Path
-from gallifrey.visualization.seaborn import get_palette
+from gallifrey.visualization.visualization_utils import get_palette
 
 
 def plot_maps(
