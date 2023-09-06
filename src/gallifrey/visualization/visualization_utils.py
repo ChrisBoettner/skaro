@@ -177,7 +177,7 @@ class FigureProcessor:
         self.figure.savefig(path, bbox_inches="tight", pad_inches=0)
 
 
-def contour_plot(
+def contourplot(
     data: pd.DataFrame,
     x: str,
     y: str,

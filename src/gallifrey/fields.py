@@ -291,7 +291,7 @@ class Fields:
         Parameters
         ----------
         log_solar_fe_fraction : float
-            Solar iron fraction,  m_Fe/m_H.
+            Solar iron fraction, m_Fe/m_H.
 
         """
         self.check_star_properties()
@@ -301,18 +301,72 @@ class Fields:
             fe_fraction = (
                 data["stars", "Fe_fraction"].value / data["stars", "H_fraction"].value
             )
-            fe_fraction[fe_fraction < 0] = 0  # some values are < 0
             log_fe_fraction = np.where(
-                fe_fraction > 0, np.ma.log10(fe_fraction), -3
-            )  # set those values to -3
+                fe_fraction > 0,
+                np.ma.log10(fe_fraction),
+                -10,
+            )  # set values<0 values to -3
 
             # normalise to stellar fraction
             fe_abundance = log_fe_fraction - log_solar_fe_fraction
+            # deal with outliers
             return self.ds.arr(fe_abundance, "1")
 
         self.ds.add_field(
             ("stars", "[Fe/H]"),
             function=_iron_abundance,
+            sampling_type="local",
+            units="auto",
+            dimensions=1,
+        )
+
+    def add_alpha_abundance(self, log_solar_alpha_fe_fraction: float = 1.09) -> None:
+        """
+        Add alpha element abundance [alpha/Fe].
+
+        Parameters
+        ----------
+        log_solar_alpha_fe_fraction : float
+            Solar alpha element fraction, m_alpha/m_Fe.
+
+        """
+        self.check_star_properties()
+
+        def _alpha_abundance(field: DerivedField, data: FieldDetector) -> NDArray:
+            # calculate alpha element masses for star particles
+            alpha_elements = np.sum(
+                [
+                    data["stars", fraction].value
+                    for fraction in [
+                        "O_fraction",
+                        "C_fraction",
+                        "N_fraction",
+                        "Mg_fraction",
+                        "Si_fraction",
+                        "Ne_fraction",
+                    ]
+                ]
+            )
+
+            # calculate alpha/Fe for valid inputs
+            valid_condition = (data["stars", "Fe_fraction"].value > 0) & (
+                alpha_elements > 0
+            )
+            alpha_fraction = np.where(
+                valid_condition,
+                np.ma.divide(alpha_elements, data["stars", "Fe_fraction"].value),
+                1,
+            )
+
+            log_alpha_fraction = np.ma.log10(alpha_fraction)
+
+            # normalise to stellar fraction
+            alpha_abundance = log_alpha_fraction - log_solar_alpha_fe_fraction
+            return self.ds.arr(alpha_abundance, "1")
+
+        self.ds.add_field(
+            ("stars", "[alpha/Fe]"),
+            function=_alpha_abundance,
             sampling_type="local",
             units="auto",
             dimensions=1,

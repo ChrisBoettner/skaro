@@ -120,6 +120,7 @@ def data_setup(
 
         fields.add_number_of_stars(stellar_model, imf, imf_bounds=imf_bounds)
         fields.add_iron_abundance()
+        fields.add_alpha_abundance()
 
     # %%
     with Timer("Adding Planets..."):
