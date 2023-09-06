@@ -334,12 +334,12 @@ def remove_central_colorbar_ticks(fig: Figure, subplot_columns: int) -> None:
         Number of subplot columns.
 
     """
-    subplot_axes = filter_subplot_axes(fig)
-    for i, ax in enumerate(subplot_axes):
+    _, cbar_axes = filter_subplot_axes(fig)
+    for i, ax in enumerate(cbar_axes):
         # if not at end of row, delete colorbar
         if (i + 1) % subplot_columns != 0:
-            ax.cax.set_xticks([])
-            ax.cax.set_yticks([])
+            ax.set_xticks([])
+            ax.set_yticks([])
 
 
 def create_labels(
@@ -384,7 +384,7 @@ def add_labels(fig: Figure, labels: list[str]) -> None:
         List of labels for each plot.
 
     """
-    subplot_axes = filter_subplot_axes(fig)
+    subplot_axes, _ = filter_subplot_axes(fig)
     for ax, label in zip(subplot_axes, labels):
         label_font = ax.xaxis.get_label().get_fontproperties()
         ax.text(
@@ -400,7 +400,7 @@ def add_labels(fig: Figure, labels: list[str]) -> None:
         )
 
 
-def filter_subplot_axes(fig: Figure) -> list[Axes]:
+def filter_subplot_axes(fig: Figure) -> tuple[list[Axes], list[Axes]]:
     """
     Filter out axes that are subplots (rather than colorbars) from fig object by
     checking the aspect ratios of the subplot.
@@ -412,19 +412,23 @@ def filter_subplot_axes(fig: Figure) -> list[Axes]:
 
     Returns
     -------
-    axes : list[Axes]
-        The list of subplot axes.
+    subplot_axes : list[Axes]
+        List of subplot axes.
+    cbar_axes : list [Axes]
+        List of colorbar axes.
 
     """
-    axes = []
+    subplot_axes = []
+    cbar_axes = []
     for ax in fig.axes:
         # calculate aspect ratio, hacky way to skip colorbar axis
         aspect_ratio = abs(
             (ax.get_xlim()[1] - ax.get_xlim()[0])
             / (ax.get_ylim()[1] - ax.get_ylim()[0])
         )
-        if not (0.1 < aspect_ratio < 10):
-            continue
+        if (0.1 < aspect_ratio < 10):
+            subplot_axes.append(ax)
         else:
-            axes.append(ax)
-    return axes
+            cbar_axes.append(ax)
+        print(aspect_ratio, type(ax))
+    return subplot_axes, cbar_axes
