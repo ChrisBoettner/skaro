@@ -9,6 +9,7 @@ import os
 import warnings
 from typing import Any, Optional
 
+import mpl_toolkits
 import numpy as np
 import yt
 from matplotlib.pyplot import Axes, Figure
@@ -402,8 +403,7 @@ def add_labels(fig: Figure, labels: list[str]) -> None:
 
 def filter_subplot_axes(fig: Figure) -> tuple[list[Axes], list[Axes]]:
     """
-    Filter out axes that are subplots (rather than colorbars) from fig object by
-    checking the aspect ratios of the subplot.
+    Filter out axes that are subplots and colorbars from fig object.
 
     Parameters
     ----------
@@ -421,14 +421,15 @@ def filter_subplot_axes(fig: Figure) -> tuple[list[Axes], list[Axes]]:
     subplot_axes = []
     cbar_axes = []
     for ax in fig.axes:
-        # calculate aspect ratio, hacky way to skip colorbar axis
-        aspect_ratio = abs(
-            (ax.get_xlim()[1] - ax.get_xlim()[0])
-            / (ax.get_ylim()[1] - ax.get_ylim()[0])
-        )
-        if (0.1 < aspect_ratio < 10):
+        # check for colorbars
+        if isinstance(ax, mpl_toolkits.axes_grid1.axes_grid.CbarAxesBase):
+            cbar_axes.append(ax)
+        #  check for plot axes
+        elif isinstance(ax, mpl_toolkits.axes_grid1.mpl_axes.Axes):
             subplot_axes.append(ax)
         else:
-            cbar_axes.append(ax)
-        print(aspect_ratio, type(ax))
+            raise RuntimeError(
+                "Axis type not understood, must either be mpl_axes.Axes or "
+                "axes_grid.CbarAxesBase."
+            )
     return subplot_axes, cbar_axes
