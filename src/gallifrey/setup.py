@@ -122,6 +122,12 @@ def data_setup(
         fields.add_iron_abundance()
         fields.add_alpha_abundance()
 
+        normal_vector = mw.normal_vector("stars", data=mw.sphere(radius=(10, "kpc")))
+        fields.add_circularity(normal_vector)
+        fields.add_height(normal_vector)
+
+        filters.add_galaxy_components()
+
     # %%
     with Timer("Adding Planets..."):
         if planet_params is None:
@@ -138,17 +144,5 @@ def data_setup(
                 imf_bounds,
                 **planet_params,
             )
-
-    with Timer("Other Calculations..."):
-        mw.insert(
-            "BULGE_END",
-            5,
-            "in kpc. Rough estimate for run 09_18",
-        )
-        mw.insert(
-            "DISK_END",
-            18,
-            "in kpc. Rough estimate for run 09_18",
-        )
 
     return ds, mw, stellar_model, imf, planet_model

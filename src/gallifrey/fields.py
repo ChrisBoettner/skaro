@@ -335,17 +335,20 @@ class Fields:
         def _alpha_abundance(field: DerivedField, data: FieldDetector) -> NDArray:
             # calculate alpha element masses for star particles
             alpha_elements = np.sum(
-                [
-                    data["stars", fraction].value
-                    for fraction in [
-                        "O_fraction",
-                        "C_fraction",
-                        "N_fraction",
-                        "Mg_fraction",
-                        "Si_fraction",
-                        "Ne_fraction",
+                np.array(
+                    [
+                        data["stars", fraction].value
+                        for fraction in [
+                            "O_fraction",
+                            "C_fraction",
+                            "N_fraction",
+                            "Mg_fraction",
+                            "Si_fraction",
+                            "Ne_fraction",
+                        ]
                     ]
-                ]
+                ),
+                axis=0,
             )
 
             # calculate alpha/Fe for valid inputs
@@ -370,6 +373,89 @@ class Fields:
             sampling_type="local",
             units="auto",
             dimensions=1,
+        )
+
+    def add_circularity(self, normal_vector: np.ndarray) -> None:
+        """
+        Add circularity of star particles, defined by ratio between angular momentum
+        component normal to galactic plane divided by magnitude of total angular
+        momentum.
+
+        Parameters
+        ----------
+        normal_vector : np.ndarray
+            Normal vector to galactic plane.
+
+        """
+        self.check_star_properties()
+
+        # scale vector to magnitude = 1
+        normal_vector = normal_vector / np.linalg.norm(normal_vector)
+
+        def _circularity(field: DerivedField, data: FieldDetector) -> NDArray:
+            # calculate relative velocity within dataset
+            mean_velocity = np.mean(data["stars", "particle_velocity"], axis=0)
+            relative_velocity = data["stars", "particle_velocity"] - mean_velocity
+
+            # calculate specific angular momentum
+            specific_angular_momentum = self.ds.arr(
+                np.cross(
+                    data["stars", "relative_particle_position"].to("km"),
+                    relative_velocity.to("km/s"),
+                ),
+                "km**2/s",
+            )
+
+            # calculate ratio between normal component and magnitude
+            angular_momentum_normal_component = np.dot(
+                specific_angular_momentum, normal_vector
+            )
+            angular_momentum_magnitude = np.sqrt(
+                np.sum(specific_angular_momentum**2, axis=1)
+            )
+
+            circularity = np.where(
+                angular_momentum_magnitude > 0,
+                np.ma.divide(
+                    angular_momentum_normal_component, angular_momentum_magnitude
+                ),
+                0,
+            )
+            return self.ds.arr(circularity, "1")
+
+        self.ds.add_field(
+            ("stars", "circularity"),
+            function=_circularity,
+            sampling_type="local",
+            units="auto",
+            dimensions=1,
+        )
+
+    def add_height(self, normal_vector: np.ndarray) -> None:
+        """
+        Add height over galactic plane.
+
+        Parameters
+        ----------
+        normal_vector : np.ndarray
+            Normal vector to galactic plane.
+
+        """
+        self.check_star_properties()
+
+        # scale vector to magnitude = 1
+        normal_vector = normal_vector / np.linalg.norm(normal_vector)
+
+        def _height(field: DerivedField, data: FieldDetector) -> NDArray:
+            coordinates = data["stars", "relative_particle_position"]
+            height = np.dot(coordinates, normal_vector).to("kpc").value
+            return self.ds.arr(height, "kpc")
+
+        self.ds.add_field(
+            ("stars", "height"),
+            function=_height,
+            sampling_type="local",
+            units="kpc",
         )
 
     @staticmethod

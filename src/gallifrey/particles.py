@@ -75,20 +75,20 @@ def rotated_dataset(
             "calculation in make_dataset."
         )
 
-    if type(fields) is tuple:
+    if isinstance(fields, tuple):
         if len(fields) == 2:
             field_list = [fields]
         else:
             raise ValueError(
                 "If fields is tuple, must be 2-tuple of form (part_type, property)."
             )
-    else:
-        assert type(fields) is list
+    elif isinstance(fields, list):
         field_list = fields
+    else:
+        raise ValueError("'fields' must be tuple or list.")
 
     # get particle type
     particle_type = field_list[0][0]
-
     # get original coordinates and masses
     coordinates = ds[(particle_type, "particle_position")].to(length_unit)
     masses = ds[(particle_type, "particle_mass")].to(mass_unit)
@@ -173,7 +173,7 @@ def make_dataset(
         ):
             data["particle_position"] = coordinates
 
-            # calculate perpendicular radius ass.uming dataset was rotated to be face-on
+            # calculate perpendicular radius assuming dataset was rotated to be face-on
             # in z-direction (target vector = [0,0,1])
             fields += [(particle_type, "perp_radius")]
             data["perp_radius"] = unyt_array(

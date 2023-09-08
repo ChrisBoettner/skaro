@@ -1,6 +1,4 @@
 MW:         # ID
-  BULGE_END: 5    # in kpc. Rough estimate for run 09_18
-  DISK_END: 18    # in kpc. Point where disk luminosity decreases to 0.001*I0 from HESTIA paper Table 9 for run 09_18
   X: 4.67915820e+04           # in kpc
   Y: 4.90646641e+04           # in kpc
   Z: 4.98877266e+04           # in kpc

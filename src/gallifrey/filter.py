@@ -117,3 +117,81 @@ class Filter:
             return id_filter
 
         self.ds.add_particle_filter("halo_gas")
+
+    def add_galaxy_components(
+        self,
+        spheroid_circularity_cut: float = 0.2,
+        thin_disk_circularity_cut: float = 0.6,
+        thin_disk_height_cut: float = 1,
+    ) -> None:
+        """
+        Add stars in different components of galaxy (thin disk, thick disk, spheroid)
+        based on their circularity and height over galactic plane.
+
+        Parameters
+        ----------
+        spheroid_circularity_cut : float, optional
+            Circularity below which values are categorized as spheroid. The default
+            is 0.2.
+        thin_disk_circularity_cut : float, optional
+            Circularity above which values are categorized as thin_disk. The default is
+            0.6.
+        thin_disk_height_cut : float, optional
+            Maximum height over galactic plane (in kpc) for classification into
+            thin disk. The default is 1.
+
+        """
+
+        @yt.particle_filter(
+            requires=["circularity"],
+            filtered_type="stars",
+        )
+        def spheroid_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
+            spheroid_filter = (
+                data[(pfilter.filtered_type, "circularity")] <= spheroid_circularity_cut
+            )
+            return spheroid_filter
+
+        @yt.particle_filter(
+            requires=["circularity"],
+            filtered_type="stars",
+        )
+        def thin_disk_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
+            circularity_filter = (
+                data[(pfilter.filtered_type, "circularity")]
+                >= thin_disk_circularity_cut
+            )
+            height_filter = (
+                np.abs(data[(pfilter.filtered_type, "height")].to("kpc"))
+                <= thin_disk_height_cut
+            )
+
+            return np.logical_and(circularity_filter, height_filter)
+
+        @yt.particle_filter(
+            requires=["circularity"],
+            filtered_type="stars",
+        )
+        def thick_disk_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
+            # recreate spheroid filter
+            spheroid_filter = (
+                data[(pfilter.filtered_type, "circularity")] <= spheroid_circularity_cut
+            )
+
+            # recreate thin disk filter
+            circularity_filter = (
+                data[(pfilter.filtered_type, "circularity")]
+                >= thin_disk_circularity_cut
+            )
+            height_filter = (
+                np.abs(data[(pfilter.filtered_type, "height")].to("kpc"))
+                <= thin_disk_height_cut
+            )
+            thin_disk_filter = np.logical_and(circularity_filter, height_filter)
+
+            # in thick disk, if neither in thin disk nor spheroid
+            return np.logical_not(np.logical_or(spheroid_filter, thin_disk_filter))
+
+        self.ds.add_particle_filter("thin_disk_stars")
+        self.ds.add_particle_filter("thick_disk_stars")
+        self.ds.add_particle_filter("spheroid_stars")

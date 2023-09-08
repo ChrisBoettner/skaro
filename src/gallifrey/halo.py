@@ -12,6 +12,7 @@ from typing import Any, Optional
 import numpy as np
 from ruamel.yaml import YAML
 from unyt.array import unyt_array, unyt_quantity
+from yt.data_objects.data_containers import YTDataContainer
 from yt.data_objects.selection_objects.disk import YTDisk
 from yt.data_objects.selection_objects.region import YTRegion
 from yt.data_objects.selection_objects.spheroids import YTSphere
@@ -20,6 +21,7 @@ from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
 from gallifrey.data.paths import Path
 from gallifrey.filter import Filter
+from gallifrey.utilities.math import calculate_pca
 
 
 class HaloContainer:
@@ -108,6 +110,39 @@ class HaloContainer:
         scale = self.ds.quan(self.M, "Msun") / (overdensity_constant * critical_density)
 
         return (0.75 / np.pi * scale) ** (1 / 3)
+
+    def normal_vector(
+        self,
+        particle_type: str,
+        data: Optional[YTDataContainerDataset | YTDataContainer] = None,
+    ) -> np.ndarray:
+        """
+        Calculate normal vector to structure of particles using PCA. Assumes a disk-like
+        structure and return Principle Component with smallest explained variance.
+
+        Parameters
+        ----------
+        particle_type : str
+            Type of particles for which normal vector should be calculated.
+        data : Optional[YTDataContainerDataset | YTDataContainer], optional
+            The data source. If None, calculate use sphere around origin with a radius
+            of 10% the virial radius. The default is None.
+
+        Returns
+        -------
+        normal_vector : np.array
+            Normal vector (normalised to 1).
+
+        """
+
+        if data is None:
+            data = self.sphere(radius=0.1 * self.virial_radius())
+
+        normal_vector = calculate_pca(data[particle_type, "Coordinates"]).components_[
+            -1
+        ]
+
+        return normal_vector
 
     def sphere(
         self,
