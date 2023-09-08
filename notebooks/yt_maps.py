@@ -136,7 +136,7 @@ def plot_component_maps(
         fig = plot.export_to_mpl_figure((1, 1), cbar_mode=cbar_mode, axes_pad=0)
 
         if save:
-            file_name = f"Component_maps/{component}_map_{normal}"
+            file_name = f"Galaxy_component_maps/{component}_map_{normal}"
             if figure_name_addon:
                 file_name = f"{file_name}_{figure_name_addon}.pdf"
             else:
