@@ -22,7 +22,7 @@ from gallifrey.visualization.visualization_utils import get_palette
 
 def plot_component_maps(
     galaxy_component_data: dict[str, YTDataContainerDataset],
-    field_value: Optional[str] = "number",
+    field_value: Optional[str] = "total_number",
     normal: str = "z",
     weight_field: Optional[tuple[str, str]] = None,
     colorbar_percentiles: tuple[float, float] = (1, 99),
@@ -32,7 +32,7 @@ def plot_component_maps(
     figsize: tuple[float, float] = (12.6, 12.6),
     deposition_method: str = "cic",
     density_unit: str = "1/pc**2",
-    font_dict: dict[str, Any] = {"size": 16},
+    font_dict: dict[str, Any] = {"size": 40},
     hide_colorbar: bool = True,
     hide_axes: bool = False,
     save: bool = False,
@@ -46,7 +46,7 @@ def plot_component_maps(
     galaxy_component_data : dict[str, YTDataContainerDataset]
         Dictonary of data containers, must be of form {component_name: component_data}.
     field_value:
-        The field value to be plotted. The default is "number", which corresponds
+        The field value to be plotted. The default is "total_number", which corresponds
         to the number of stars.
     normal : str, optional
         Direction of normal vector for projection. The default is "z".
@@ -130,10 +130,10 @@ def plot_component_maps(
 
         if hide_axes:
             plot.hide_axes(draw_frame=True)
-            plot.annotate_scale(coeff=5)
+            plot.annotate_scale(coeff=5, text_args=font_dict)
 
         # export tp matplotlib
-        fig = plot.export_to_mpl_figure((1, 1), cbar_mode=cbar_mode, axes_pad=0)
+        fig = plot.export_to_mpl_figure((1, 1), cbar_mode=cbar_mode)
 
         if save:
             file_name = f"Galaxy_component_maps/{component}_map_{normal}"
@@ -170,7 +170,7 @@ def plot_planet_maps(
     figsize: tuple[float, float] = (18.5, 10.5),
     deposition_method: str = "cic",
     density_unit: str = "1/pc**2",
-    font_dict: dict[str, Any] = {"size": 16},
+    font_dict: dict[str, Any] = {"size": 18},
     subplot_columns: int = 3,
     subplot_pad: float | tuple[float, float] = (0, 0),
     save: bool = False,

@@ -32,7 +32,7 @@ def data_setup(
     ngpps_num_embryos: int = 50,
     ngpps_star_masses: float | tuple[float, ...] = 1,
     star_age_bounds: tuple[float, float] = (0.02, np.inf),
-    imf_delta: float = 0.05,
+    planet_hosting_imf_delta: float = 0.05,
     planet_params: Optional[dict[str, Any]] = None,
 ) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel]:
     """
@@ -59,7 +59,7 @@ def data_setup(
     star_age_bounds : tuple[float, float], optional
         The age range for star particles to be considered in the add_stars
         command. The default is (0.02, np.inf).
-    imf_delta : float, optional
+    planet_hosting_imf_delta : float, optional
         If ngpps_star_masses is a single number, the IMF is integrated in the range
         ((1-imf_delta_mass)*ngpps_star_mass, (1+imf_delta)*ngpps_star_masses). No effect
         if the ngpps_star_masses span a range. The default is 0.05.
@@ -98,12 +98,15 @@ def data_setup(
         imf = ChabrierIMF()
 
         if isinstance(ngpps_star_masses, (int, float)):
-            imf_bounds = (
-                (1 - imf_delta) * ngpps_star_masses,
-                (1 + imf_delta) * ngpps_star_masses,
+            planet_hosting_imf_bounds = (
+                (1 - planet_hosting_imf_delta) * ngpps_star_masses,
+                (1 + planet_hosting_imf_delta) * ngpps_star_masses,
             )
         elif isinstance(ngpps_star_masses, tuple):
-            imf_bounds = (np.amin(ngpps_star_masses), np.amax(ngpps_star_masses))
+            planet_hosting_imf_bounds = (
+                np.amin(ngpps_star_masses),
+                np.amax(ngpps_star_masses),
+            )
         else:
             raise ValueError(
                 "ngpps_star_masses must either be number (int, float) or a list of "
@@ -118,7 +121,11 @@ def data_setup(
         fields.convert_PartType4_properties()
         filters.add_stars(age_limits=star_age_bounds)
 
-        fields.add_number_of_stars(stellar_model, imf, imf_bounds=imf_bounds)
+        fields.add_number_of_stars(
+            stellar_model,
+            imf,
+            planet_hosting_imf_bounds=planet_hosting_imf_bounds,
+        )
         fields.add_iron_abundance()
         fields.add_alpha_abundance()
 
@@ -141,7 +148,7 @@ def data_setup(
                 planet_model,
                 stellar_model,
                 imf,
-                imf_bounds,
+                planet_hosting_imf_bounds,
                 **planet_params,
             )
 

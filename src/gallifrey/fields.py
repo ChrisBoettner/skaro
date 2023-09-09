@@ -5,6 +5,8 @@ Created on Thu Mar  9 13:10:14 2023
 
 @author: chris
 """
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 from astropy.cosmology import Planck15
@@ -91,7 +93,7 @@ class Fields:
         planet_model: PlanetModel,
         stellar_model: StellarModel,
         imf: ChabrierIMF,
-        imf_bounds: tuple[float, float],
+        planet_hosting_number: tuple[float, float],
         reference_age: int | None = 100000000,
         num_integral_points: int = 50,
         only_mainsequence: bool = True,
@@ -121,7 +123,7 @@ class Fields:
             bound.
         imf : ChabrierIMF
             Stellar initial mass function of the star particles..
-        imf_bounds : tuple[float, float]
+        planet_hosting_number : tuple[float, float]
             The range over with to integrate the imf. Corresponds to the mass range
             of stars considered.
         reference_age : int | None, optional
@@ -140,7 +142,7 @@ class Fields:
             stellar_ages = data["stars", "stellar_age"].value
             metallicities = data["stars", "[Fe/H]"]
             try:
-                number_of_stars = data["stars", "number"]
+                number_of_stars = data["stars", "planet_hosting_number"]
             except KeyError:
                 raise KeyError(
                     "['stars', 'number'] field does not exist. Create first "
@@ -181,10 +183,12 @@ class Fields:
                 # imf_bound, but if particle is old enough cut might need to be earler
                 # due to stars already going off main sequence
                 upper_bound = stellar_model.mass_from_lifetime(stellar_ages)
-                upper_bound[upper_bound > imf_bounds[1]] = imf_bounds[1]
+                upper_bound[
+                    upper_bound > planet_hosting_number[1]
+                ] = planet_hosting_number[1]
 
                 # create integration space
-                m_space = np.geomspace(*imf_bounds, num_integral_points)
+                m_space = np.geomspace(*planet_hosting_number, num_integral_points)
 
                 # linear interpolation of number of planets
                 planets_per_star_function = interp1d(
@@ -235,11 +239,17 @@ class Fields:
         self,
         stellar_model: StellarModel,
         imf: ChabrierIMF,
-        imf_bounds: tuple[float, float],
+        imf_bounds: Optional[tuple[float, float]] = None,
+        planet_hosting_imf_bounds: Optional[tuple[float, float]] = None,
         only_mainsequence: bool = True,
     ) -> None:
         """
-        Add (number of) stars field to star particles.
+        Add (number of) stars field to star particles. Two fields are added:
+        total_number and planet_hosting_number.
+        total_number corresponds to stars between imf_bounds. If no value is given,
+        defaults to bounds of imf object.
+        planet_hosting_number corresponds to stars between planet_hosting_imf_bounds. If
+        no value is given, planet_hosting_number field will not be created.
 
         Parameters
         ----------
@@ -248,9 +258,12 @@ class Fields:
             bound.
         imf : ChabrierIMF
             Stellar initial mass function of the star particles.
-        imf_bounds : tuple[float, float]
-            The range over with to integrate the imf. Corresponds to the mass range
-            of stars considered.
+        imf_bounds : Optional[tuple[float, float]], optional
+            The range over with to integrate the imf for total_number field. The default
+            is None, which uses imf object bounds.
+        planet_hosting_imf_bounds : Optional[tuple[float, float]], optional
+            The range over with to integrate the imf for planet_hosting_number. The
+            default is None. In that case, planet_hosting_number will not be created.
         only_mainsequence: bool, optional
             If True, only integrate IMF up to the mass where the stellar lifetime
             matches the star particle age, i.e. only include main sequence stars. If
@@ -260,29 +273,62 @@ class Fields:
         """
         self.check_star_properties()
 
-        def _star_number(field: DerivedField, data: FieldDetector) -> NDArray:
+        # calculate number of stars between two bounds
+        def _star_number(
+            field: DerivedField, data: FieldDetector, bounds: tuple[float, float]
+        ) -> NDArray:
             if only_mainsequence:
                 # calculate upper bound based on star particle age and stellar
                 # lifetime
                 stellar_ages = data["stars", "stellar_age"].value
                 upper_bound = stellar_model.mass_from_lifetime(stellar_ages)
-                upper_bound[upper_bound > imf_bounds[1]] = imf_bounds[1]
+                upper_bound[upper_bound > bounds[1]] = bounds[1]
             else:
-                upper_bound = imf_bounds[1]
+                upper_bound = bounds[1]
 
             particle_masses = data["stars", "InitialMass"].to("Msun").value
             number_of_stars = imf.number_of_stars(
-                particle_masses, imf_bounds[0], upper_bound
+                particle_masses, bounds[0], upper_bound
             )
             return self.ds.arr(number_of_stars, "1")
 
+        # add total number of stars
+        def _total_star_number(field: DerivedField, data: FieldDetector) -> NDArray:
+            # if no IMF bounds are given, use bounds of imf object
+            if imf_bounds is None:
+                bounds = (imf.a, imf.b)
+            else:
+                bounds = imf_bounds
+            return _star_number(field, data, bounds)
+
         self.ds.add_field(
-            ("stars", "number"),
-            function=_star_number,
+            ("stars", "total_number"),
+            function=_total_star_number,
             sampling_type="local",
             units="auto",
             dimensions=1,
         )
+
+        # add number of planet hosting stars considered by planet model
+        if planet_hosting_imf_bounds is not None:
+
+            def _planet_star_number(
+                field: DerivedField, data: FieldDetector
+            ) -> NDArray:
+                return _star_number(field, data, planet_hosting_imf_bounds)
+
+            self.ds.add_field(
+                ("stars", "planet_hosting_number"),
+                function=_planet_star_number,
+                sampling_type="local",
+                units="auto",
+                dimensions=1,
+            )
+        else:
+            logger.warn(
+                "FIELDS: No planet_hosting_imf_bounds bounds given to "
+                "add_stars. planet_hosting_number field not created."
+            )
 
     def add_iron_abundance(self, log_solar_fe_fraction: float = -2.7) -> None:
         """

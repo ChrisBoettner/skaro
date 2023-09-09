@@ -356,7 +356,7 @@ class ChabrierIMF(rv_continuous):
     def __init__(
         self,
         slope: float = 1.35,
-        mean: float = 0.2,
+        m_c: float = 0.2,
         variance: float = 0.6,
         lower_mass_limit: float = 0.08,
         upper_mass_limit: float = 100,
@@ -370,9 +370,9 @@ class ChabrierIMF(rv_continuous):
         ----------
         slope : float, optional
             Slope of power law section. The default is 1.35.
-        mean : float, optional
+        m_c : float, optional
             Mean of lognormal section, defined so that the exponential reads
-            ((log(m)-log(mean))**2). The default is 0.2.
+            ((log(m)-log(m_c))**2). The default is 0.2.
         variance : float, optional
             Variance of lognormal section. The default is 0.6.
         lower_mass_limit : float, optional
@@ -393,7 +393,7 @@ class ChabrierIMF(rv_continuous):
         if np.any(
             [
                 slope != 1.35,
-                mean != 0.2,
+                m_c != 0.2,
                 variance != 0.6,
                 lower_mass_limit != 0.08,
                 upper_mass_limit != 100,
@@ -408,7 +408,7 @@ class ChabrierIMF(rv_continuous):
             )
 
         self.slope = slope
-        self.mean = mean
+        self.m_c = m_c
         self.variance = variance
         self.transition_point = transition_point
         self.mass_normalisation = mass_normalisation
@@ -424,7 +424,7 @@ class ChabrierIMF(rv_continuous):
         self.ln10 = np.log(10)
         # constant for lognormal (to connect continously to powerlaw)
         self.constant_1 = self.mass_normalisation * np.exp(
-            (np.log10(self.mean) ** 2) / self.variance
+            (np.log10(self.m_c) ** 2) / self.variance
         )
         # costant for lognormal anti-derivative
         self.sigma_2 = self.ln10 * np.sqrt(self.variance)  # converts between log and ln
@@ -460,7 +460,7 @@ class ChabrierIMF(rv_continuous):
             (
                 (self.constant_1 / self.ln10)
                 * (1 / m)
-                * np.exp(-(np.log10(m / self.mean) ** 2) / self.variance)
+                * np.exp(-(np.log10(m / self.m_c) ** 2) / self.variance)
             ),
         )
         return pdf
@@ -580,7 +580,7 @@ class ChabrierIMF(rv_continuous):
             Value of anti-derivative.
 
         """
-        return self.constant_2 * erf(np.log(np.asarray(m) / self.mean) / self.sigma_2)
+        return self.constant_2 * erf(np.log(np.asarray(m) / self.m_c) / self.sigma_2)
 
     def _antiderivative_powerlaw(self, m: float | NDArray) -> float | NDArray:
         """
