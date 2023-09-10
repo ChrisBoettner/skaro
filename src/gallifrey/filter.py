@@ -219,8 +219,8 @@ class Filter:
             # in thick disk, if neither in thin disk nor spheroid
             return np.logical_not(np.logical_or(spheroid_filter, thin_disk_filter))
 
+        self.ds.add_particle_filter("spheroid_stars")
+        self.ds.add_particle_filter("bulge_stars")
+        self.ds.add_particle_filter("halo_stars")
         self.ds.add_particle_filter("thin_disk_stars")
         self.ds.add_particle_filter("thick_disk_stars")
-        self.ds.add_particle_filter("spheroid_stars")
-        self.ds.add_particle_filter("halo_stars")
-        self.ds.add_particle_filter("bulge_stars")

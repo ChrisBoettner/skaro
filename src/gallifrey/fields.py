@@ -451,20 +451,22 @@ class Fields:
                 ),
                 "km**2/s",
             )
+ 
+            # calculate between normal component and magnitude
+            normal_component = np.dot(specific_angular_momentum, normal_vector)
+            magnitude = np.sqrt(np.sum(specific_angular_momentum**2, axis=1))
 
-            # calculate ratio between normal component and magnitude
-            angular_momentum_normal_component = np.dot(
-                specific_angular_momentum, normal_vector
-            )
-            angular_momentum_magnitude = np.sqrt(
-                np.sum(specific_angular_momentum**2, axis=1)
-            )
+            # define positive normal direction so that most stars are co-rotation
+            # (meaning if more stars are counter rotating, switch sign around)
+            num_co_rotating = np.count_nonzero(normal_component > 0)
+            num_anti_rotating = np.count_nonzero(normal_component < 0)
+            if num_anti_rotating > num_co_rotating:
+                normal_component = -normal_component
 
+            # calculate circularity as ratio between normal component and magnitude
             circularity = np.where(
-                angular_momentum_magnitude > 0,
-                np.ma.divide(
-                    angular_momentum_normal_component, angular_momentum_magnitude
-                ),
+                magnitude > 0,
+                np.ma.divide(normal_component, magnitude),
                 0,
             )
             return self.ds.arr(circularity, "1")
