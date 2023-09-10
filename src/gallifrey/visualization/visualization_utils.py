@@ -402,7 +402,7 @@ def ridgeplot(
                     *label_position,
                     label,
                     fontweight="bold",
-                    color=color,
+                    color="black",
                     ha="right",
                     va="center",
                     transform=ax.transAxes,
@@ -417,5 +417,8 @@ def ridgeplot(
             grid.set_titles("")
             grid.set(yticks=[], ylabel="")
             grid.despine(bottom=True, left=True)
+
+            # Add a frame around the entire plot
+            grid.fig.tight_layout
 
     return grid

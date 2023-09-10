@@ -451,7 +451,7 @@ class Fields:
                 ),
                 "km**2/s",
             )
- 
+
             # calculate between normal component and magnitude
             normal_component = np.dot(specific_angular_momentum, normal_vector)
             magnitude = np.sqrt(np.sum(specific_angular_momentum**2, axis=1))
