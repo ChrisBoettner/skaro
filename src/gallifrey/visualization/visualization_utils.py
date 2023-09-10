@@ -20,6 +20,10 @@ from matplotlib.pyplot import Axes, Figure
 from seaborn.palettes import _ColorPalette
 
 from gallifrey.data.paths import Path
+from gallifrey.utilities.logging import logger
+
+# create Logger
+logger = logger(__name__)
 
 
 def set_plot_defaults() -> None:
@@ -31,7 +35,7 @@ def set_plot_defaults() -> None:
         context="paper",
         style="whitegrid",
         palette="pastel",
-        font_scale=2.7,
+        font_scale=3.2,
         rc={
             "figure.figsize": (18.5, 10.5),
             "axes.grid": False,
@@ -315,3 +319,103 @@ def contourplot(
     # adapt layout
     fig.tight_layout()
     return fig, [contour_ax, cbar_ax, histogram_ax]
+
+
+def ridgeplot(
+    data: pd.DataFrame,
+    x: str,
+    row: str,
+    height: float = 3,
+    aspect: float = 7,
+    hspace: float = -0.45,
+    palette: Optional[_ColorPalette] = None,
+    font_scale: float = 5,
+    label_position: tuple[float, float] = (1, 0.2),
+) -> sns.FacetGrid:
+    """
+    Create Ridgeplot using Seaborn FacetGrid.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The dataframe containing the data.
+    x : str
+        Name of column containing the x values.
+    row : str
+        Name of column by which the FacetGrid is build, should be categorical.
+    height : float, optional
+        Height (in inches) of each facet. The default is 3.
+    aspect : float, optional
+        Aspect ratio of each facet, so that aspect * height gives the width of each
+        facet in inches. The default is 7.
+    hspace : float, optional
+        Distance between ridgle plots, negative values lead to overlap. The
+        default is -.45.
+    palette : Optional[_ColorPalette], optional
+        The color palette. The default is None.
+    font_scale : float, optional
+        Multiplier for font scale. The default is 5.
+    label_position : tuple[float, float], optional
+        Position of labels for every facet, in axes coordinates. The default is (1, .2).
+
+    Returns
+    -------
+    grid : FacetGrid
+        The FacetGrid object. Access matplotlib figure using figure attribute and
+        axes using axes attribute.
+
+    """
+    # set font_scale and make background transparent, for this plot only
+    with sns.plotting_context("paper", font_scale=font_scale):
+        with plt.rc_context(rc={"axes.facecolor": (0, 0, 0, 0)}):
+            if data[row].nunique() > 10:
+                logger.warn(
+                    "VISUALIZATION: Ridgeplot tries to create more than 10 "
+                    "rows. This might take a while. Are you sure you "
+                    "specificed the right dataframe column for the rows? It "
+                    "should contain categorical data."
+                )
+
+            # create grid
+            grid = sns.FacetGrid(
+                data,
+                row=row,
+                hue=row,
+                height=height,
+                aspect=aspect,
+                palette=palette,
+                sharex=True,
+            )
+
+            # Draw kde plot and white outline
+            grid.map(sns.kdeplot, x, clip_on=False, fill=True, alpha=1, linewidth=1.5)
+            grid.map(sns.kdeplot, x, clip_on=False, color="white", lw=3)
+
+            # add reference line bottom,
+            # passing color=None to refline() uses the hue mapping
+            grid.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+
+            # Define and use a simple function to label the plot in axes coordinates
+            def label(x: str, color: str, label: str) -> None:
+                ax = plt.gca()
+                ax.text(
+                    *label_position,
+                    label,
+                    fontweight="bold",
+                    color=color,
+                    ha="right",
+                    va="center",
+                    transform=ax.transAxes,
+                )
+
+            grid.map(label, x)
+
+            # Set the subplots to overlap
+            grid.figure.subplots_adjust(hspace=hspace)
+
+            # Remove axes details that don't play well with overlap
+            grid.set_titles("")
+            grid.set(yticks=[], ylabel="")
+            grid.despine(bottom=True, left=True)
+
+    return grid

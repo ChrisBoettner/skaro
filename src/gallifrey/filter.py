@@ -123,6 +123,7 @@ class Filter:
         spheroid_circularity_cut: float = 0.2,
         thin_disk_circularity_cut: float = 0.6,
         thin_disk_height_cut: float = 1,
+        spheroid_halo_seperation: float = 2.88,
     ) -> None:
         """
         Add stars in different components of galaxy (thin disk, thick disk, spheroid)
@@ -139,6 +140,10 @@ class Filter:
         thin_disk_height_cut : float, optional
             Maximum height over galactic plane (in kpc) for classification into
             thin disk. The default is 1.
+        bulge_halo_seperation: float, optional
+            Radius from galactic center seperating bulge and halo (in kpc). The default
+            value is 3, based on the Sérsic profile effective radius given in
+            Libeskind2020.
 
         """
 
@@ -149,6 +154,28 @@ class Filter:
         def spheroid_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
             spheroid_filter = (
                 data[(pfilter.filtered_type, "circularity")] <= spheroid_circularity_cut
+            )
+            return spheroid_filter
+
+        @yt.particle_filter(
+            requires=["particle_radius"],
+            filtered_type="spheroid_stars",
+        )
+        def bulge_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
+            spheroid_filter = (
+                data[(pfilter.filtered_type, "particle_radius")].to("kpc")
+                <= spheroid_halo_seperation
+            )
+            return spheroid_filter
+
+        @yt.particle_filter(
+            requires=["particle_radius"],
+            filtered_type="spheroid_stars",
+        )
+        def halo_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
+            spheroid_filter = (
+                data[(pfilter.filtered_type, "particle_radius")].to("kpc")
+                > spheroid_halo_seperation
             )
             return spheroid_filter
 
@@ -195,3 +222,5 @@ class Filter:
         self.ds.add_particle_filter("thin_disk_stars")
         self.ds.add_particle_filter("thick_disk_stars")
         self.ds.add_particle_filter("spheroid_stars")
+        self.ds.add_particle_filter("halo_stars")
+        self.ds.add_particle_filter("bulge_stars")

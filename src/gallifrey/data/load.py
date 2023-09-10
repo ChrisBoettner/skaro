@@ -53,6 +53,8 @@ def load_snapshot(
         logger.info("DETECTED LOCAL MACHINE: Test snapshot loaded.")
         path = Path().raw_data(r"snapdir_127/snapshot_127.0.hdf5")
 
+        index_name = "test_snapshot.index5_7.ewah"
+
     else:
         # check if snapshot is available
         if not ((snapshot >= 0) and (snapshot <= 127)):
@@ -77,8 +79,13 @@ def load_snapshot(
             case _:
                 raise ValueError("Resolution should be 2048, 4096 or 8192.")
 
+        index_name = f"{sim_id}_{snapshot}_{resolution}.index5_7.ewah"
+
+    # location and name of cache file for indexing created by yt
+    index_cache_path = Path().interim_data(f"index_cache/{index_name}")
+
     try:
-        dataset = yt.load(path)
+        dataset = yt.load(path, index_filename=index_cache_path)
     except FileNotFoundError:
         raise FileNotFoundError("Snapshot not found.")
 

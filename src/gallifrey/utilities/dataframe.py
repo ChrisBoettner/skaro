@@ -71,7 +71,7 @@ def aggregated_dataframe(
 
 def rename_labels(
     dataframe: pd.DataFrame, mapping_dict: Optional[dict] = None
-) -> tuple[pd.DataFrame, list]:
+) -> tuple[pd.DataFrame, dict[str, str]]:
     """
     Rename columns of a dataframe based on a mapping dictionary and return dataframe
     with changed labels, as well as a list of labels.
@@ -89,23 +89,29 @@ def rename_labels(
     -------
     dataframe : pd.DataFrame
         The dataframe with renamed columns.
-    labels : list
-        A list of the applied new column names.
+    label_dict : list
+        A dictionary containing the old label (keys) and new
+        labels (columns).
 
     """
 
     if mapping_dict is None:
         mapping_dict = {
-            "log_initial_mass": r"log $M_\mathrm{g}$ [$M_\odot$]",
+            "log_initial_mass": r"log $M_\mathrm{g}$ ($M_\odot$)",
             "[Fe/H]": "[Fe/H]",
-            "[alpha/Fe]": r"[$\mathrm{\alpha}$/Fe]",
-            "log_inner_edge": r"log $r_\mathrm{in}$ [AU]",
+            "log_inner_edge": r"log $r_\mathrm{in}$ (AU)",
             "log_photoevaporation": (
-                r"log $\dot{M}_\mathrm{wind}$ [$\frac{M_\odot}{\mathrm{yr}}$]"
+                r"log $\dot{M}_\mathrm{wind}$"
+                r"$\left(\frac{M_\odot}{\mathrm{yr}}\right)$"
             ),
-            "log_solid_mass": r"log $M_\mathrm{s}$ [$M_\mathrm{Jupiter}$]",
+            "log_solid_mass": r"log $M_\mathrm{s}$ ($M_\mathrm{Jupiter}$)",
+            "[alpha/Fe]": r"[$\mathrm{\alpha}$/Fe]",
+            "stellar_age": "Stellar Age (Gyr)",
+            "particle_radius": "Distance (kpc)",
         }
 
     dataframe = dataframe.rename(columns=mapping_dict)
-    labels = [label for label in dataframe.columns if label in mapping_dict.values()]
-    return dataframe, labels
+    label_dict = {
+        key: value for key, value in mapping_dict.items() if value in dataframe.columns
+    }
+    return dataframe, label_dict
