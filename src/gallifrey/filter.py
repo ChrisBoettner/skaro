@@ -123,7 +123,7 @@ class Filter:
         spheroid_circularity_cut: float = 0.2,
         thin_disk_circularity_cut: float = 0.6,
         thin_disk_height_cut: float = 1,
-        spheroid_halo_seperation: float = 2.88,
+        spheroid_halo_seperation: float = 5.76,
     ) -> None:
         """
         Add stars in different components of galaxy (thin disk, thick disk, spheroid)
@@ -142,7 +142,7 @@ class Filter:
             thin disk. The default is 1.
         bulge_halo_seperation: float, optional
             Radius from galactic center seperating bulge and halo (in kpc). The default
-            value is 3, based on the Sérsic profile effective radius given in
+            value is 5.76, based on the 2*Sérsic profile effective radius given in
             Libeskind2020.
 
         """
