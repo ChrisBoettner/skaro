@@ -5,6 +5,7 @@ Created on Mon Jul  3 11:29:47 2023
 
 @author: chris
 """
+import os
 from typing import Any, Optional
 
 import numpy as np
@@ -85,8 +86,16 @@ def data_setup(
 
     """
     # %%
+    if os.environ.get("USER") == "chris":  # if local system, load the test file
+        logger.info("DETECTED LOCAL MACHINE: Test snapshot loaded.")
+        resolution = 4096
+        snapshot = 127
+        test_flag = True  # load test snapshot on local machine
+    else:
+        test_flag = False
+
     with Timer("Loading Hestia Snapshot..."):
-        ds = load_snapshot(snapshot, resolution)
+        ds = load_snapshot(snapshot, resolution, test_flag=test_flag)
         mw = MainHalo("MW", resolution, ds, sim_id=sim_id)
 
         filters = Filter(ds)

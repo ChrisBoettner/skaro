@@ -120,10 +120,10 @@ class Filter:
 
     def add_galaxy_components(
         self,
-        spheroid_circularity_cut: float = 0.2,
-        thin_disk_circularity_cut: float = 0.6,
-        thin_disk_height_cut: float = 1,
-        spheroid_halo_seperation: float = 6.4,
+        spheroid_circularity_cut: float = 0.5,
+        thin_disk_circularity_cut: float = 0.95,
+        thin_disk_height_cut: Optional[float] = None,
+        bulge_halo_seperation: float = 6.4,
     ) -> None:
         """
         Add stars in different components of galaxy (thin disk, thick disk, spheroid)
@@ -133,13 +133,13 @@ class Filter:
         ----------
         spheroid_circularity_cut : float, optional
             Circularity below which values are categorized as spheroid. The default
-            is 0.2.
+            is 0.5.
         thin_disk_circularity_cut : float, optional
             Circularity above which values are categorized as thin_disk. The default is
-            0.6.
-        thin_disk_height_cut : float, optional
-            Maximum height over galactic plane (in kpc) for classification into
-            thin disk. The default is 1.
+            0.95.
+        thin_disk_height_cut : Optional[float], optional
+            Optional maximum height over galactic plane (in kpc) for classification into
+            thin disk. The default is None, which deactivates this constraint.
         bulge_halo_seperation: float, optional
             Radius from galactic center seperating bulge and halo (in kpc). The default
             value is 6.4, based on Figure 9 of Libeskind2020.
@@ -163,7 +163,7 @@ class Filter:
         def bulge_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
             spheroid_filter = (
                 data[(pfilter.filtered_type, "particle_radius")].to("kpc")
-                <= spheroid_halo_seperation
+                <= bulge_halo_seperation
             )
             return spheroid_filter
 
@@ -174,7 +174,7 @@ class Filter:
         def halo_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
             spheroid_filter = (
                 data[(pfilter.filtered_type, "particle_radius")].to("kpc")
-                > spheroid_halo_seperation
+                > bulge_halo_seperation
             )
             return spheroid_filter
 
@@ -187,10 +187,13 @@ class Filter:
                 data[(pfilter.filtered_type, "circularity")]
                 >= thin_disk_circularity_cut
             )
-            height_filter = (
-                np.abs(data[(pfilter.filtered_type, "height")].to("kpc"))
-                <= thin_disk_height_cut
-            )
+            if thin_disk_height_cut is not None:
+                height_filter = (
+                    np.abs(data[(pfilter.filtered_type, "height")].to("kpc"))
+                    <= thin_disk_height_cut
+                )
+            else:
+                height_filter = np.full(circularity_filter.shape, True)
 
             return np.logical_and(circularity_filter, height_filter)
 
@@ -209,10 +212,13 @@ class Filter:
                 data[(pfilter.filtered_type, "circularity")]
                 >= thin_disk_circularity_cut
             )
-            height_filter = (
-                np.abs(data[(pfilter.filtered_type, "height")].to("kpc"))
-                <= thin_disk_height_cut
-            )
+            if thin_disk_height_cut is not None:
+                height_filter = (
+                    np.abs(data[(pfilter.filtered_type, "height")].to("kpc"))
+                    <= thin_disk_height_cut
+                )
+            else:
+                height_filter = np.full(circularity_filter.shape, True)
             thin_disk_filter = np.logical_and(circularity_filter, height_filter)
 
             # in thick disk, if neither in thin disk nor spheroid

@@ -5,7 +5,6 @@ Created on Tue Jan 31 17:52:43 2023
 
 @author: chris
 """
-
 import os
 
 import yt
@@ -22,6 +21,7 @@ def load_snapshot(
     snapshot: int,
     resolution: int,
     sim_id: str = "09_18",
+    test_flag: bool = False,
 ) -> ArepoHDF5Dataset:
     """
 
@@ -34,6 +34,8 @@ def load_snapshot(
         Particle resolution of the simulation, should be 2048, 4096 or 8192.
     sim_id : str, optional
         ID of the concrete simulation run. The default is "09_18".
+    test_flag : bool, optional
+        If True, load local test snapshot. The default is False.
 
     Raises
     ------
@@ -49,8 +51,7 @@ def load_snapshot(
         yt dataset object.
 
     """
-    if os.environ.get("USER") == "chris":  # if local system, load the test file
-        logger.info("DETECTED LOCAL MACHINE: Test snapshot loaded.")
+    if test_flag:  # if local system, load the test file
         path = Path().raw_data(r"snapdir_127/snapshot_127.0.hdf5")
 
         index_name = "test_snapshot.index5_7.ewah"
@@ -83,6 +84,9 @@ def load_snapshot(
 
     # location and name of cache file for indexing created by yt
     index_cache_path = Path().interim_data(f"index_cache/{index_name}")
+    # create directory if it doesn't exist already
+    if not os.path.exists(os.path.dirname(index_cache_path)):
+        os.makedirs(os.path.dirname(index_cache_path))
 
     try:
         dataset = yt.load(path, index_filename=index_cache_path)
