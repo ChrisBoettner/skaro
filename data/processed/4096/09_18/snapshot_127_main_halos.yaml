@@ -1,4 +1,5 @@
 MW:         # ID
+  BULGE_END: 6.4  # in kpc. Rough estimate for run 09_18 based on Figure 9 in Libeskind2020 
   X: 4.67915820e+04           # in kpc
   Y: 4.90646641e+04           # in kpc
   Z: 4.98877266e+04           # in kpc

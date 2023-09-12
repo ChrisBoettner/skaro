@@ -152,4 +152,11 @@ def data_setup(
                 **planet_params,
             )
 
+    with Timer("Other Calculations..."):
+        mw.insert(
+            "BULGE_END",
+            6.4,
+            "in kpc. Rough estimate for run 09_18 based on Figure 9 in Libeskind2020 ",
+        )
+
     return ds, mw, stellar_model, imf, planet_model

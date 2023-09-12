@@ -19,6 +19,8 @@ def aggregated_dataframe(
     field_values: str | list[str],
     data_source: YTDataContainer | YTDataContainerDataset,
     type_name: str = "Type",
+    base_units: str = "galactic",
+    custom_units: Optional[dict[str, str]] = None,
 ) -> pd.DataFrame:
     """
     Create dataframe with different field values, annotated by particle type from
@@ -33,7 +35,14 @@ def aggregated_dataframe(
     data_source : YTDataContainer|YTDataContainerDataset
         The data source.
     type_name : str, optional
-        Name of the column that contains the particle type.
+        Name of the column that contains the particle type. The default is 'Type'.
+    base_units : str, optional
+        Sets the unit system in which data should be returned by unyt. The default is
+        'galactic', corresponding to kpc, Myr, Msun, etc.
+    custom_units : dict[str,str], optional
+        Change units for some specific field_values. Input must be a dictionary with
+        the key being the field_value name and the value being the units. The default is
+        None.
 
     Returns
     -------
@@ -51,21 +60,32 @@ def aggregated_dataframe(
     # additional column "Type" that informs about the particle type
     dataframes = [
         pd.DataFrame(
-            data_source[particle_type, field_values[0]], columns=[particle_type]
+            data_source[particle_type, field_values[0]].value,
+            columns=[particle_type],
         ).melt(var_name=type_name, value_name=field_values[0])
         for particle_type in particle_types
     ]
     dataframe = pd.concat(dataframes)
 
     # add potential further field values
-    if len(field_values) > 1:
-        for field_value in field_values[1:]:
-            dataframe[field_value] = flatten_list(
-                [
-                    data_source[particle_type, field_value].value
-                    for particle_type in particle_types
-                ]
-            )
+    for field_value in field_values:
+        # use custon units if available
+        if (custom_units is not None) and (field_value in custom_units.keys()):
+            data = [
+                data_source[particle_type, field_value]
+                .to(custom_units[field_value])
+                .value
+                for particle_type in particle_types
+            ]
+        # otherwise use default units
+        else:
+            data = [
+                data_source[particle_type, field_value].in_base(base_units).value
+                for particle_type in particle_types
+            ]
+
+        dataframe[field_value] = flatten_list(data)
+
     return dataframe
 
 
