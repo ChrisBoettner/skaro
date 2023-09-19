@@ -505,6 +505,36 @@ class Fields:
             sampling_type="local",
             units="kpc",
         )
+        
+    def add_planar_radius(self, normal_vector: np.ndarray) -> None:
+        """
+        Add radial distance projected onto the galactic plane.
+
+        Parameters
+        ----------
+        normal_vector : np.ndarray
+            Normal vector to galactic plane.
+
+        """
+        self.check_star_properties()
+
+        # scale vector to magnitude = 1
+        normal_vector = normal_vector / np.linalg.norm(normal_vector)
+
+        def _planar_radius(field: DerivedField, data: FieldDetector) -> NDArray:
+            coordinates = data["stars", "relative_particle_position"]
+            height = np.dot(coordinates, normal_vector).to("kpc").value
+            distances = data["stars", "particle_radius"].to("kpc").value
+            
+            planar_radius = np.sqrt(distances**2-height**2)          
+            return self.ds.arr(planar_radius, "kpc")
+
+        self.ds.add_field(
+            ("stars", "planar_radius"),
+            function=_planar_radius,
+            sampling_type="local",
+            units="kpc",
+        )
 
     @staticmethod
     def _stellar_age(

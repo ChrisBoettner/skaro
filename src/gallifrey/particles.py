@@ -67,14 +67,6 @@ def rotated_dataset(
         Rotated dataset created using yt.
 
     """
-    if target_vector != (0, 0, 1):
-        raise ValueError(
-            "Currently only a target_vector of (0,0,1) is accepted, "
-            "since this information is used to calculate perp_radius. "
-            "If another target is required, adjust perp_radius "
-            "calculation in make_dataset."
-        )
-
     if isinstance(fields, tuple):
         if len(fields) == 2:
             field_list = [fields]
@@ -172,13 +164,6 @@ def make_dataset(
             and coordinates.shape[1] == 3
         ):
             data["particle_position"] = coordinates
-
-            # calculate perpendicular radius assuming dataset was rotated to be face-on
-            # in z-direction (target vector = [0,0,1])
-            fields += [(particle_type, "perp_radius")]
-            data["perp_radius"] = unyt_array(
-                np.linalg.norm(coordinates[:, :2], axis=1), length_unit
-            )
 
         else:
             raise ValueError("Shape of coordinate array does not match.")

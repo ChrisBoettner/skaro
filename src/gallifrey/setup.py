@@ -141,6 +141,7 @@ def data_setup(
         normal_vector = mw.normal_vector("stars", data=mw.sphere(radius=(10, "kpc")))
         fields.add_circularity(normal_vector)
         fields.add_height(normal_vector)
+        fields.add_planar_radius(normal_vector)
 
         filters.add_galaxy_components()
 

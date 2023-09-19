@@ -121,8 +121,8 @@ class Filter:
     def add_galaxy_components(
         self,
         spheroid_circularity_cut: float = 0.5,
-        thin_disk_circularity_cut: float = 0.95,
-        thin_disk_height_cut: Optional[float] = None,
+        thin_disk_circularity_cut: float = 0.8,
+        thin_disk_height_cut: Optional[float] = 1,
         bulge_halo_seperation: float = 6.4,
     ) -> None:
         """
