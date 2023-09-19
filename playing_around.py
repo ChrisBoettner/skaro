@@ -28,8 +28,8 @@ ds, mw, stellar_model, imf, planet_model, path = data_setup(ngpps_num_embryos=nu
                                                             ngpps_star_masses=host_star_mass)
 
 #%%
-path += "/snapshot_127" 
+f_path = path + "/snapshot_127" 
 
 from gallifrey.decomposition.mordor import galaxy_components
 
-galaxy_components(path, mw)
+galaxy_components(f_path, mw)

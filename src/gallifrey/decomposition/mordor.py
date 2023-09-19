@@ -1,9 +1,15 @@
 import numpy as np
 import pynbody
-from gallifrey.decomposition import decomposition
-
+from pynbody.snapshot.gadgethdf import GadgetHDFSnap
 from pynbody.snapshot import IndexedSubSnap
 
+from gallifrey.decomposition import decomposition
+
+# put GadgetHDFSnap at front of snaphot priority list
+snap_class_config = pynbody.config["snap-class-priority"]
+gadgethdf5_index = [snap_class == GadgetHDFSnap 
+                    for snap_class in snap_class_config].index(True)
+snap_class_config.insert(0, snap_class_config.pop(gadgethdf5_index))
 
 def gsoft(z:float)-> float:
     '''
@@ -59,7 +65,7 @@ def galaxy_components(file_path, halo, centre=None, radius=None):
     
     galaxy = data[pynbody.filt.Sphere(radius_value, centre_value)]
     galaxy["pos"] -= centre_value
-    
+
     # set physical units as default
     galaxy.physical_units()
     
