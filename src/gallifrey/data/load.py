@@ -50,7 +50,7 @@ def load_snapshot(
     ArepoHDF5Dataset
         yt dataset object.
     Path
-        Path to snapshot.   
+        Path to snapshot directory.   
 
     """
     if test_flag:  # if local system, load the test file
@@ -95,4 +95,4 @@ def load_snapshot(
     except FileNotFoundError:
         raise FileNotFoundError("Snapshot not found.")
 
-    return dataset, str(path)
+    return dataset, str(path.parent)
