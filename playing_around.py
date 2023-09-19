@@ -16,7 +16,7 @@ import pathlib
 import sys
 import os
 
-sys.path.append(str(pathlib.Path(os.getcwd()).parent.joinpath("src")))
+sys.path.append(str(pathlib.Path(os.getcwd()).joinpath("src")))
 
 from gallifrey.particles import rotated_dataset
 from gallifrey.setup import data_setup
@@ -24,8 +24,8 @@ from gallifrey.setup import data_setup
 #%%
 num_embryos = 50
 host_star_mass = (0.7, 1)
-ds, mw, stellar_model, imf, planet_model = data_setup(ngpps_num_embryos=num_embryos,
-                                                      ngpps_star_masses=host_star_mass)
+ds, mw, stellar_model, imf, planet_model, path = data_setup(ngpps_num_embryos=num_embryos,
+                                                            ngpps_star_masses=host_star_mass)
 
 #%%
 #mw_ids = pd.read_csv("test_mw_ids")
@@ -35,17 +35,28 @@ import h5py
 import pynbody
 from gallifrey.data.paths import Path
 
-path = str(Path.raw_data("snapdir_127/snapshot_127"))
-
-#s = pynbody.load(path)
-
-#%%
-
-#centre = mw.centre().to("code_length").value
-#radius = ds.quan(25, "kpc").to("code_length").value
-
-#sphere = s[pynbody.filt.Sphere(radius, centre)]
+#path = str(Path.raw_data("snapdir_127/snapshot_127"))
 
 from gallifrey.decomposition.mordor import galaxy_components
 
 galaxy_components(path, mw, radius=ds.quan(1, "kpc"))
+
+
+
+
+
+#%%
+s = pynbody.load(path)
+
+centre = mw.centre().to("code_length").value
+radius = ds.quan(1, "kpc").to("code_length").value
+
+sphere = s[pynbody.filt.Sphere(radius, centre)]
+
+sphere["pos"] -= centre
+
+
+
+#del s
+
+#pynbody.analysis.halo.center(sphere, mode="hyb", move_all=False)

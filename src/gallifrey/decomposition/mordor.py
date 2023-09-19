@@ -61,11 +61,10 @@ def galaxy_components(file_path, halo, centre=None, radius=None):
     radius_value = radius.to("code_length").value
     galaxy = data[pynbody.filt.Sphere(radius_value, centre_value)]
     
-    with galaxy.immediate_mode:
-        # center sphere
+    with galaxy.immediate_mode:    
+        # center galaxy on halo centre
         galaxy["pos"] -= centre_value
-    
-    
+        
         # set physical units as default
         galaxy.physical_units()
         
@@ -84,20 +83,14 @@ def galaxy_components(file_path, halo, centre=None, radius=None):
         galaxy["phi"] /= galaxy.properties["a"] ** 2
     
         # center the galaxy
-        # pynbody.analysis.halo.center(galaxy, wrap=True, mode="hyb")
-        hmr = get_half_mass_radius(galaxy.s)
-        # # check if the galaxy has a strange shape through the distance of the centre of 
-        # # mass of the stars
-        # sc = pynbody.analysis.halo.center(galaxy.s, retcen=True, mode="hyb")
-        # if np.sqrt(np.sum(sc * sc)) > max(0.5 * hmr, 2.8 * gsoft(galaxy.properties["z"])):
-        #     # Re-centre on stars
-        #     try:
-        #         pynbody.analysis.halo.center(galaxy.s, mode="hyb")
-        #     except:
-        #         pynbody.analysis.halo.center(galaxy.s, mode="hyb", cen_size="3 kpc")
-        #     hmr = get_half_mass_radius(galaxy.s)
+        pos_centre = pynbody.analysis.halo.center(galaxy, mode="hyb", retcen=True)
+        vel_centre = pynbody.analysis.halo.vel_center(galaxy, mode="hyb", retcen=True)
+        
+        galaxy["pos"] -= pos_centre
+        galaxy["vel"] -= vel_centre
     
         # define region where to compute the angular momentum to align the galaxy
+        hmr = get_half_mass_radius(galaxy.s)
         size = max(3 * hmr, 2.8 * gsoft(galaxy.properties["z"]))
     
         # rotate the galaxy in order to align its angular momentum with the z-axis

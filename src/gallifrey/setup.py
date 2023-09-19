@@ -95,7 +95,7 @@ def data_setup(
         test_flag = False
 
     with Timer("Loading Hestia Snapshot..."):
-        ds = load_snapshot(snapshot, resolution, test_flag=test_flag)
+        ds, path = load_snapshot(snapshot, resolution, test_flag=test_flag)
         mw = MainHalo("MW", resolution, ds, sim_id=sim_id)
 
         filters = Filter(ds)
@@ -169,4 +169,4 @@ def data_setup(
             "in kpc. Rough estimate for run 09_18 based on Figure 9 in Libeskind2020 ",
         )
 
-    return ds, mw, stellar_model, imf, planet_model
+    return ds, mw, stellar_model, imf, planet_model, path
