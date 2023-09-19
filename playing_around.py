@@ -12,6 +12,12 @@ import pandas as pd
 import seaborn as sns
 import yt
 
+import pathlib
+import sys
+import os
+
+sys.path.append(str(pathlib.Path(os.getcwd()).parent.joinpath("src")))
+
 from gallifrey.particles import rotated_dataset
 from gallifrey.setup import data_setup
 
@@ -42,4 +48,4 @@ path = str(Path.raw_data("snapdir_127/snapshot_127"))
 
 from gallifrey.decomposition.mordor import galaxy_components
 
-galaxy_components(path, mw, radius=ds.quan(.1, "kpc"))
+galaxy_components(path, mw, radius=ds.quan(1, "kpc"))
