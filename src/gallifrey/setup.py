@@ -12,6 +12,7 @@ import numpy as np
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 
 from gallifrey.data.load import load_snapshot
+from gallifrey.decomposition.mordor import galaxy_components
 
 # from gallifrey.visualization.manager import DefaultFigureManager as fm
 from gallifrey.fields import Fields
@@ -141,11 +142,13 @@ def data_setup(
         fields.add_alpha_abundance()
 
         normal_vector = mw.normal_vector("stars", data=mw.sphere(radius=(10, "kpc")))
-        fields.add_circularity(normal_vector)
         fields.add_height(normal_vector)
         fields.add_planar_radius(normal_vector)
 
-        filters.add_galaxy_components()
+        component_dataframe = galaxy_components(
+            mw, snapshot_path + f"/snapshot_{snapshot}"
+        )
+        filters.add_galaxy_components(component_dataframe)
 
     # %%
     with Timer("Adding Planets..."):

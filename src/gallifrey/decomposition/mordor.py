@@ -108,6 +108,15 @@ def calculate_galaxy_decomposition(
 
     """
     # load data
+    if not (snapshot_path[-3]).isdigit():
+        logger.warn(
+            "WARNING: Last three chars in snapshot_path are not an "
+            "integer, which would usually be the snapshot number. This "
+            "might be intended, but be catious that the path passed to "
+            "pynbody must be the name of the first snapshot file without "
+            " trailing .0.hdf5 or similar suffixes. Otherwise only part "
+            " of the snapshot will be loaded."
+        )
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         data = pynbody.load(snapshot_path)
@@ -176,17 +185,19 @@ def calculate_galaxy_decomposition(
     # launch the decomposition,
     # immediate_mode needed to directly work with Arrays that are compatible with numba
     # read more: https://pynbody.github.io/pynbody/tutorials/performance.html
-    with galaxy.immediate_mode:
-        decomposition.morph(
-            galaxy,
-            j_circ_from_r=False,
-            LogInterp=False,
-            BoundOnly=True,
-            Ecut=None,
-            jThinMin=0.7,
-            mode="cosmo_sim",
-            dimcell=None,
-        )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with galaxy.immediate_mode:
+            decomposition.morph(
+                galaxy,
+                j_circ_from_r=False,
+                LogInterp=False,
+                BoundOnly=True,
+                Ecut=None,
+                jThinMin=0.7,
+                mode="cosmo_sim",
+                dimcell=None,
+            )
 
     # save decomposition
     assignment = np.array([galaxy.s["morph"], galaxy.s["iord"]])

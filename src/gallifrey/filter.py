@@ -9,6 +9,7 @@ Created on Thu Feb 23 08:51:50 2023
 from typing import Any, Optional
 
 import numpy as np
+import pandas as pd
 import yt
 from numpy.typing import ArrayLike
 from yt.data_objects.particle_filters import ParticleFilter
@@ -118,114 +119,107 @@ class Filter:
 
         self.ds.add_particle_filter("halo_gas")
 
-    def add_galaxy_components(
-        self,
-        spheroid_circularity_cut: float = 0.5,
-        thin_disk_circularity_cut: float = 0.8,
-        thin_disk_height_cut: Optional[float] = 1,
-        bulge_halo_seperation: float = 6.4,
-    ) -> None:
+    def add_galaxy_components(self, component_dataframe: pd.DataFrame) -> None:
         """
-        Add stars in different components of galaxy (thin disk, thick disk, spheroid)
-        based on their circularity and height over galactic plane.
+        Add stars in different components of galaxy (thin disk, thick disk, bulge,
+        halo). The decomposition is performed by the mordor code (Zana2022).
+        For our purposes we classify both thick disk and pseudo-bulge stars as
+        thick disk.
 
         Parameters
         ----------
-        spheroid_circularity_cut : float, optional
-            Circularity below which values are categorized as spheroid. The default
-            is 0.5.
-        thin_disk_circularity_cut : float, optional
-            Circularity above which values are categorized as thin_disk. The default is
-            0.95.
-        thin_disk_height_cut : Optional[float], optional
-            Optional maximum height over galactic plane (in kpc) for classification into
-            thin disk. The default is None, which deactivates this constraint.
-        bulge_halo_seperation: float, optional
-            Radius from galactic center seperating bulge and halo (in kpc). The default
-            value is 6.4, based on Figure 9 of Libeskind2020.
+        compotent_dataframe : pd.DataFrame
+            Dataframe with galaxy components, must contain columns 'Component' and
+            'ParticleIDs'. Usually created using
+            gallifrey.decomposition.mordor.galaxy_components
 
         """
 
-        @yt.particle_filter(
-            requires=["circularity"],
-            filtered_type="stars",
-        )
-        def spheroid_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
-            spheroid_filter = (
-                data[(pfilter.filtered_type, "circularity")] <= spheroid_circularity_cut
-            )
-            return spheroid_filter
-
-        @yt.particle_filter(
-            requires=["particle_radius"],
-            filtered_type="spheroid_stars",
-        )
+        @yt.particle_filter(requires=["ParticleIDs"], filtered_type="stars")
         def bulge_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
-            spheroid_filter = (
-                data[(pfilter.filtered_type, "particle_radius")].to("kpc")
-                <= bulge_halo_seperation
+            return _create_component_mask(
+                component_dataframe,
+                data["stars", "ParticleIDs"].astype(int).value,
+                component="bulge",
             )
-            return spheroid_filter
 
-        @yt.particle_filter(
-            requires=["particle_radius"],
-            filtered_type="spheroid_stars",
-        )
-        def halo_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
-            spheroid_filter = (
-                data[(pfilter.filtered_type, "particle_radius")].to("kpc")
-                > bulge_halo_seperation
-            )
-            return spheroid_filter
-
-        @yt.particle_filter(
-            requires=["circularity"],
-            filtered_type="stars",
-        )
+        @yt.particle_filter(requires=["ParticleIDs"], filtered_type="stars")
         def thin_disk_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
-            circularity_filter = (
-                data[(pfilter.filtered_type, "circularity")]
-                >= thin_disk_circularity_cut
+            return _create_component_mask(
+                component_dataframe,
+                data["stars", "ParticleIDs"].astype(int).value,
+                component="thin_disk",
             )
-            if thin_disk_height_cut is not None:
-                height_filter = (
-                    np.abs(data[(pfilter.filtered_type, "height")].to("kpc"))
-                    <= thin_disk_height_cut
-                )
-            else:
-                height_filter = np.full(circularity_filter.shape, True)
 
-            return np.logical_and(circularity_filter, height_filter)
-
-        @yt.particle_filter(
-            requires=["circularity"],
-            filtered_type="stars",
-        )
+        @yt.particle_filter(requires=["ParticleIDs"], filtered_type="stars")
         def thick_disk_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
-            # recreate spheroid filter
-            spheroid_filter = (
-                data[(pfilter.filtered_type, "circularity")] <= spheroid_circularity_cut
+            return _create_component_mask(
+                component_dataframe,
+                data["stars", "ParticleIDs"].astype(int).value,
+                component="thick_disk",
             )
 
-            # recreate thin disk filter
-            circularity_filter = (
-                data[(pfilter.filtered_type, "circularity")]
-                >= thin_disk_circularity_cut
+        @yt.particle_filter(requires=["ParticleIDs"], filtered_type="stars")
+        def halo_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
+            return _create_component_mask(
+                component_dataframe,
+                data["stars", "ParticleIDs"].astype(int).value,
+                component="halo",
             )
-            if thin_disk_height_cut is not None:
-                height_filter = (
-                    np.abs(data[(pfilter.filtered_type, "height")].to("kpc"))
-                    <= thin_disk_height_cut
-                )
-            else:
-                height_filter = np.full(circularity_filter.shape, True)
-            thin_disk_filter = np.logical_and(circularity_filter, height_filter)
 
-            # in thick disk, if neither in thin disk nor spheroid
-            return np.logical_not(np.logical_or(spheroid_filter, thin_disk_filter))
-
-        self.ds.add_particle_filter("spheroid_stars")
         self.ds.add_particle_filter("bulge_stars")
-        self.ds.add_particle_filter("halo_stars")
         self.ds.add_particle_filter("thin_disk_stars")
         self.ds.add_particle_filter("thick_disk_stars")
+        self.ds.add_particle_filter("halo_stars")
+
+
+def _create_component_mask(
+    compotent_dataframe: pd.DataFrame,
+    star_particle_IDs: np.ndarray,
+    component: str,
+    component_dict: Optional[dict[str, list]] = None,
+) -> np.ndarray:
+    """
+    Creates mask on star_particle_IDs categorising if they belong to a given
+    galaxy component.
+    By default, pseudo-bulge and thick disk are both classified as thick disk.
+
+    Parameters
+    ----------
+    compotent_dataframe : pd.DataFrame
+        Dataframe with components, must contain columns 'Component' and 'ParticleIDs'.
+        Usually created using gallifrey.decomposition.mordor.galaxy_components
+    star_particle_IDs : np.ndarray
+        List of all star particles IDs in yt selection.
+    component : str
+        Name of component to filter for.
+    component_dict : Optional[dict[str, list]], optional
+        Mapping between component name and integer used by mordor. The default is None,
+        which creates the default mapping.
+
+    Returns
+    -------
+    np.ndarray
+        The mask filtering out the galaxy components.
+
+    """
+    # default component mapping, puts thick disk and pseudo-bulge into thick disk
+    # category
+    if component_dict is None:
+        component_dict = {
+            "thin_disk": [1],
+            "thick_disk": [2, 3],
+            "bulge": [4],
+            "halo": [5],
+        }
+
+    if component not in component_dict.keys():
+        raise ValueError("component not found in component_dict.")
+
+    # filter out Particle IDs for component
+    component_ids = compotent_dataframe["ParticleIDs"][
+        compotent_dataframe["Component"].isin(component_dict[component])
+    ].to_numpy()
+
+    # return mask
+    return np.isin(star_particle_IDs, component_ids, assume_unique=True)

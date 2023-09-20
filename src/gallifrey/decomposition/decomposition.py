@@ -451,7 +451,7 @@ def morph(
                 print("Refinement:")
             Ecut = RefineMin(te, Ecut, D, (M_E - m_E) / NbinMax, shrink)
 
-    print("Ecut = ", Ecut)
+    # print("Ecut = ", Ecut)
 
     # ----------------------------------------------------------------------------------
 

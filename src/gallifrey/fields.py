@@ -421,7 +421,7 @@ class Fields:
             dimensions=1,
         )
 
-    def add_circularity(self, normal_vector: np.ndarray) -> None:
+    def add_angular_momentum_alignment(self, normal_vector: np.ndarray) -> None:
         """
         Add circularity of star particles, defined by ratio between angular momentum
         component normal to galactic plane divided by magnitude of total angular
@@ -438,7 +438,10 @@ class Fields:
         # scale vector to magnitude = 1
         normal_vector = normal_vector / np.linalg.norm(normal_vector)
 
-        def _circularity(field: DerivedField, data: FieldDetector) -> NDArray:
+        def _angular_momentum_alignment(
+            field: DerivedField,
+            data: FieldDetector,
+        ) -> NDArray:
             # calculate relative velocity within dataset
             mean_velocity = np.mean(data["stars", "particle_velocity"], axis=0)
             relative_velocity = data["stars", "particle_velocity"] - mean_velocity
@@ -472,8 +475,8 @@ class Fields:
             return self.ds.arr(circularity, "1")
 
         self.ds.add_field(
-            ("stars", "circularity"),
-            function=_circularity,
+            ("stars", "angular_momentum_alignment"),
+            function=_angular_momentum_alignment,
             sampling_type="local",
             units="auto",
             dimensions=1,
