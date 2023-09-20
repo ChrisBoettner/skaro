@@ -1,19 +1,23 @@
-from pynbody import filt, util, array, units
-from pynbody.analysis import profile
-from gallifrey.decomposition.kdtree import ConstructKDTree
-import scipy.interpolate as interp
+from typing import Any
+
 import numpy as np
+import scipy.interpolate as interp
+from pynbody import filt
+from pynbody.analysis import profile
+
 from gallifrey.decomposition import gravity
+from gallifrey.decomposition.kdtree import ConstructKDTree
 
 # Print some useful information
 debug = False
 
-#########################################################################################################
+########################################################################################
 
 
-def FindMin(q, m_E, M_E, nbins):
+def FindMin(q: Any, m_E: Any, M_E: Any, nbins: Any) -> Any:
     """
-    It looks for the minima in the distribution of energies q in the interval [m_E; M_E] with nbin bins
+    It looks for the minima in the distribution of energies q in the interval
+    [m_E; M_E] with nbin bins
 
     Arguments:
     q -- N array with energy of particles
@@ -22,11 +26,12 @@ def FindMin(q, m_E, M_E, nbins):
     nbins -- number of bins in the interval used to bin the distribution q
 
     Returns:
-    array with the position of the minima of the distribution q, along with their values (NB: The values do depend on nbins)
+    array with the position of the minima of the distribution q, along with their
+    values (NB: The values do depend on nbins)
     """
 
     # Minimum number of particles to perform a reliable Jcirc decomposition
-    MinPart = max(1000, 0.01 * len(q))
+    MinPart: Any = max(1000, 0.01 * len(q))
     arr = q[(q >= m_E) * (q <= M_E)]
     # Build the histogram
     hist = np.histogram(arr, bins=np.linspace(m_E, M_E, nbins))
@@ -36,9 +41,9 @@ def FindMin(q, m_E, M_E, nbins):
     left = diff[:-1]
     right = diff[1:]
     # Find the minima
-    id_E = np.where(((left < 0) * (right >= 0)) + ((left <= 0) * (right > 0)))
+    id_E: Any = np.where(((left < 0) * (right >= 0)) + ((left <= 0) * (right > 0)))
 
-    R_part = np.array([np.sum(hist[0][i + 1 :]) for i in id_E[0]])
+    R_part: Any = np.array([np.sum(hist[0][i + 1 :]) for i in id_E[0]])
     id_E = id_E[0][R_part > MinPart]
     id_E_flag = [True] * len(id_E)
     for i, ids in enumerate(id_E):
@@ -62,12 +67,19 @@ def FindMin(q, m_E, M_E, nbins):
     return 0.5 * (hist[1][id_E + 2] + hist[1][id_E + 1]), hist[0][id_E + 1]
 
 
-#########################################################################################################
+########################################################################################
 
 
-def RefineMin(q, Vmin, D, Dmin, shrink):
+def RefineMin(
+    q: Any,
+    Vmin: Any,
+    D: Any,
+    Dmin: Any,
+    shrink: Any,
+) -> Any:
     """
-    It recursively refines a minimum Vmin of the energy distribution q, within the interval of size D, centred on Vmin. Each time the
+    It recursively refines a minimum Vmin of the energy distribution q, within the
+    interval of size D, centred on Vmin. Each time the
     refinement reduce the interval size of shrink as long as D>Dmin
 
     Arguments:
@@ -107,24 +119,25 @@ def RefineMin(q, Vmin, D, Dmin, shrink):
     return Vmin
 
 
-#########################################################################################################
+########################################################################################
 
 
 def morph(
-    gal,
-    j_circ_from_r=False,
-    LogInterp=False,
-    BoundOnly=False,
-    Ecut=None,
-    jThinMin=0.7,
-    mode="tree",
-    theta=0.5,
-    dimcell="1 kpc",
-    DumpProb=False,
-):
+    gal: Any,
+    j_circ_from_r: Any = False,
+    LogInterp: Any = False,
+    BoundOnly: Any = False,
+    Ecut: Any = None,
+    jThinMin: Any = 0.7,
+    mode: Any = "tree",
+    theta: Any = 0.5,
+    dimcell: Any = "1 kpc",
+    DumpProb: Any = False,
+) -> Any:
     """
     This tool provide a kinematic decomposition of stellar particles in gal.
-    A SimArray 'morph' is generated for the stars and an integer (0-5) is assigned to each particle in order to identify its morpho-kinematic component:
+    A SimArray 'morph' is generated for the stars and an integer (0-5) is assigned to
+    each particle in order to identify its morpho-kinematic component:
 
     0 -- unbound/excluded
     1 -- thin/cold disc
@@ -138,17 +151,26 @@ def morph(
 
     Keyword arguments:
     Ecut -- the energy boundary between bulge/pseudobulge and halo/thick disc.
-    j_circ_from_r -- the circular angular momentum is computed as a function of radius, rather than as a function of orbital energy
-    LogInterp -- use a logarithmic interpolation/extrapolation, instead of a linear one, to evaluate the circular angular momentum
-    BoundOnly -- enable it to exclude those particles with E>=0, |jz/jcirc|>=1.5>=1.5, |jp/jcirc|>=1.5; see Zana et al. 2022
-    mode -- choose amongst 'direct', 'pm', 'tree', 'cosmo_sim', 'iso_sim', or 'auxiliary'. If mode is 'cosmo_sim', an offset is applied
-    DumpProb -- particles are assigned to the bulge or the halo according to a probabilistic scheme. If DumpProb is enabled, an additional SimArray is created
-                            and filled with a float for each stellar particle, where the integer part refers to the alternative morphological component (not assigned) and
-                            the decimal part to the probability of assignement. if prob=0, the particle has been assigned to the only possible component
+    j_circ_from_r -- the circular angular momentum is computed as a function of radius,
+    rather than as a function of orbital energy
+    LogInterp -- use a logarithmic interpolation/extrapolation, instead of a linear one,
+    to evaluate the circular angular momentum
+    BoundOnly -- enable it to exclude those particles with E>=0, |jz/jcirc|>=1.5>=1.5,
+    |jp/jcirc|>=1.5; see Zana et al. 2022
+    mode -- choose amongst 'direct', 'pm', 'tree', 'cosmo_sim', 'iso_sim', or
+    'auxiliary'. If mode is 'cosmo_sim', an offset is applied
+    DumpProb -- particles are assigned to the bulge or the halo according to a
+    probabilistic scheme. If DumpProb is enabled, an additional SimArray is created
+    and filled with a float for each stellar particle, where the integer part refers to
+    the alternative morphological component (not assigned) and the decimal part to the
+    probability of assignement. if prob=0, the particle has been assigned to the
+    only possible component
 
     Parameters:
-    j_disc_min -- minimum angular momentum (in terms of the circular angular momentum) that a particle must have to be part of the 'thin disc' component. Default is 0.7
-    theta -- opening angle of the tree to tune force computation accuracy when mode is 'tree'. Default is 0.5
+    j_disc_min -- minimum angular momentum (in terms of the circular angular momentum)
+    that a particle must have to be part of the 'thin disc' component. Default is 0.7
+    theta -- opening angle of the tree to tune force computation accuracy when mode
+    is 'tree'. Default is 0.5
     dimcell -- cubic cell side. When mode is 'pm'. Default is dimcell=1 kpc
 
     Returns:
@@ -160,13 +182,16 @@ def morph(
     M_bin = 400  # Maximum number of bins
     shrink = 2  # Refinement factor to find Ecut (see RefineMin)
     StartNbins = 25  # Starting bin number
-    toll = 1.5  # Bin range: increase it to find more minima. With higher values, it may not converge
+    toll = 1.5  # Bin range: increase it to find more minima. With higher values,
+    # it may not converge
     Emin = (
         -0.9
     )  # If more minima are found, those under Emin are discarded (in units of Emax)
-    Mmin = 0.05  # Minimum mass required for the bound component if more minima are found (fraction)
+    Mmin = 0.05  # Minimum mass required for the bound component if more minima are
+    # found (fraction)
 
-    # Minimum amount of bound particles to perform the analysis if 'BoundOnly' is defined. It produces only a Warning signal
+    # Minimum amount of bound particles to perform the analysis if 'BoundOnly' is
+    # defined. It produces only a Warning signal
     CutPart = 5.0e3
 
     # -------
@@ -199,7 +224,8 @@ def morph(
 
     # -------
 
-    # The whole halo (dm, gas, stars) has to be evaluated to compute the correct rotation curve
+    # The whole halo (dm, gas, stars) has to be evaluated to compute the correct
+    # rotation curve
     tree_obj = grid_obj = None
 
     if mode == "tree":
@@ -220,7 +246,8 @@ def morph(
         dimcell=dimcell,
     )
 
-    # if the potential comes from a cosmological simulations, consider an offset with the potential recalculated in isolation
+    # if the potential comes from a cosmological simulations, consider an offset with
+    # the potential recalculated in isolation
     if mode == "cosmo_sim":
         offset = disc_prof._profiles["pot"] - disc_prof["phi"]
         roff = (disc_prof["rbins"][-1] - disc_prof["rbins"][0]) * 0.2
@@ -287,10 +314,12 @@ def morph(
             )
             gal["j_circ"] = j_from_E(gal["te"])
 
-    # Force nearly unbound particles into the spheroid either by setting their circular angular momentum to infinity
+    # Force nearly unbound particles into the spheroid either by setting their circular
+    # angular momentum to infinity
     gal["j_circ"][np.where(gal["te"] > disc_prof["E_circ"].max())] = np.inf
     # or by allocating them into the last bin of the circular angular momentum
-    # gal['j_circ'][np.where(gal['te'] > disc_prof['E_circ'].max())] = disc_prof['j_circ'][-1]
+    # gal['j_circ'][np.where(gal['te'] > disc_prof['E_circ'].max())] = (
+    # disc_prof['j_circ'][-1])
 
     # Handle those few particles with E<min(E_circ) for numerical fluctuations
     gal["j_circ"][np.where(gal["te"] < disc_prof["E_circ"].min())] = disc_prof[
@@ -312,7 +341,8 @@ def morph(
         g_star._create_array("prob", dtype=float)
         g_star["prob"] = 0
 
-    # Exclude particles with E>=0 and or with too much vertical/parallel angular momentum
+    # Exclude particles with E>=0 and or with too much vertical/parallel angular
+    # momentum
     if BoundOnly:
         bound = (
             E_filt
@@ -332,9 +362,9 @@ def morph(
     # Energy as a function of the energy of the most bound particle
     te = g_star["te"] / np.abs(g_star["te"]).max()
 
-    # --------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------
 
-    if Ecut == None:
+    if Ecut is None:
         # Fix the number of bin as a function of Npart
         NbinMax = max(min(int(0.5 * np.sqrt(len(te))), M_bin), m_bin)
         nbins = StartNbins
@@ -383,7 +413,8 @@ def morph(
                 vTEMP = val_refined[(pos_E_refined <= rb[i]) * (pos_E_refined >= lb[i])]
                 if len(pTEMP) > 0:
                     # A rifened position and value for each original minimum is stored.
-                    # The value of the minima is summed to the original ones to avoid strange local minima
+                    # The value of the minima is summed to the original ones to avoid
+                    # strange local minima
                     EcutTEMP.append(pTEMP[np.argmin(vTEMP)])
                     E_valTEMP.append(v + np.min(vTEMP))
 
@@ -405,7 +436,8 @@ def morph(
         if len(Ecut) == 0:
             Ecut = 0
         else:
-            # Try to avoid strange nuclear minima with low mass if there are better alternatives
+            # Try to avoid strange nuclear minima with low mass if there are better
+            # alternatives
             rel_filt = [
                 bool((np.sum(mass[te < E]) / np.sum(mass) >= Mmin) + (E >= Emin))
                 for E in Ecut
@@ -421,7 +453,7 @@ def morph(
 
     print("Ecut = ", Ecut)
 
-    # --------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------
 
     E_low = te <= Ecut
 

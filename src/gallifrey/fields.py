@@ -505,7 +505,7 @@ class Fields:
             sampling_type="local",
             units="kpc",
         )
-        
+
     def add_planar_radius(self, normal_vector: np.ndarray) -> None:
         """
         Add radial distance projected onto the galactic plane.
@@ -525,8 +525,8 @@ class Fields:
             coordinates = data["stars", "relative_particle_position"]
             height = np.dot(coordinates, normal_vector).to("kpc").value
             distances = data["stars", "particle_radius"].to("kpc").value
-            
-            planar_radius = np.sqrt(distances**2-height**2)          
+
+            planar_radius = np.sqrt(distances**2 - height**2)
             return self.ds.arr(planar_radius, "kpc")
 
         self.ds.add_field(

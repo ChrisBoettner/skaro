@@ -35,7 +35,7 @@ def data_setup(
     star_age_bounds: tuple[float, float] = (0.02, np.inf),
     planet_hosting_imf_delta: float = 0.05,
     planet_params: Optional[dict[str, Any]] = None,
-) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel]:
+) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel, str]:
     """
     Load Hestia simulation snapshot, create Milky way halo object and
     add stellar/imf/planet properties and fields.
@@ -83,6 +83,8 @@ def data_setup(
         The Chabier IMF object.
     planet_model : PlanetModel
         The planet model.
+    snapshot_path : str
+        Path to the snapshot.
 
     """
     # %%
@@ -95,7 +97,7 @@ def data_setup(
         test_flag = False
 
     with Timer("Loading Hestia Snapshot..."):
-        ds, path = load_snapshot(snapshot, resolution, test_flag=test_flag)
+        ds, snapshot_path = load_snapshot(snapshot, resolution, test_flag=test_flag)
         mw = MainHalo("MW", resolution, ds, sim_id=sim_id)
 
         filters = Filter(ds)
@@ -169,4 +171,4 @@ def data_setup(
             "in kpc. Rough estimate for run 09_18 based on Figure 9 in Libeskind2020 ",
         )
 
-    return ds, mw, stellar_model, imf, planet_model, path
+    return ds, mw, stellar_model, imf, planet_model, snapshot_path

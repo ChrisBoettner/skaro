@@ -50,7 +50,7 @@ def load_snapshot(
     ArepoHDF5Dataset
         yt dataset object.
     Path
-        Path to snapshot directory.   
+        Path to snapshot directory.
 
     """
     if test_flag:  # if local system, load the test file
@@ -89,7 +89,7 @@ def load_snapshot(
     # create directory if it doesn't exist already
     if not os.path.exists(os.path.dirname(index_cache_path)):
         os.makedirs(os.path.dirname(index_cache_path))
-    
+
     try:
         dataset = yt.load(path, index_filename=index_cache_path)
     except FileNotFoundError:

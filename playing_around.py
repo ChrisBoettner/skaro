@@ -6,15 +6,15 @@ Created on Tue Jun  6 13:55:06 2023
 @author: chris
 """
 
+import os
+import pathlib
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import yt
-
-import pathlib
-import sys
-import os
 
 sys.path.append(str(pathlib.Path(os.getcwd()).joinpath("src")))
 
@@ -32,4 +32,4 @@ f_path = path + "/snapshot_127"
 
 from gallifrey.decomposition.mordor import galaxy_components
 
-galaxy_components(f_path, mw)
+galaxy_components(mw, f_path)

@@ -1,21 +1,15 @@
-from numba import (
-    deferred_type,
-    optional,
-    prange,
-    float32,
-    float64,
-    boolean,
-    int64,
-    njit,
-)
+from typing import Any, Optional
+
+import numpy as np
+from numba import boolean, deferred_type, float64, int64, njit, optional, prange
 from numba.experimental import jitclass
 from pynbody import array, units
-import numpy as np
 
 """
 
 Classes and functions to compute gravity through a kdtree.
-These tools are based on pykdgrav (now pytreegrav, https://github.com/mikegrudic/pytreegrav)
+These tools are based on pykdgrav (now pytreegrav,
+https://github.com/mikegrudic/pytreegrav)
 Some functions have been added/adapted
 
 """
@@ -40,12 +34,17 @@ spec = [
     ("right", optional(node_type)),
 ]
 
-#########################################################################################################
+########################################################################################
 
 
 @jitclass(spec)
 class KDNode(object):
-    def __init__(self, points, masses, softening):
+    def __init__(
+        self,
+        points: Any,
+        masses: Any,
+        softening: Any,
+    ) -> None:
         self.bounds = np.empty((3, 2))
         self.bounds[0, 0] = points[:, 0].min()
         self.bounds[0, 1] = points[:, 0].max()
@@ -84,10 +83,10 @@ class KDNode(object):
 
         self.HasLeft = False
         self.HasRight = False
-        self.left = None
-        self.right = None
+        self.left: Any = None
+        self.right: Any = None
 
-    def GenerateChildren(self, axis):
+    def GenerateChildren(self, axis: int) -> int:
         if self.IsLeaf:
             return 0
         x = self.points[:, axis]
@@ -110,16 +109,23 @@ class KDNode(object):
         return 1
 
 
+assert hasattr(KDNode, "class_type")
 node_type.define(KDNode.class_type.instance_type)
 
-#########################################################################################################
+#######################################################################################
 
 
 @njit
-def ConstructKDTree(x, m, softening):
+def ConstructKDTree(
+    x: Any,
+    m: Any,
+    softening: Any,
+) -> Any:
     if len(np.unique(x[:, 0])) < len(x):
         raise Exception(
-            "Non-unique particle positions are currently not supported by the tree-building algorithm. Consider perturbing your positions with a bit of noise if you really want to proceed."
+            "Non-unique particle positions are currently not supported by the "
+            "tree-building algorithm. Consider perturbing your positions with "
+            "a bit of noise if you really want to proceed."
         )
     root = KDNode(x, m, softening)
     nodes = [
@@ -149,13 +155,15 @@ def ConstructKDTree(x, m, softening):
     return root
 
 
-#########################################################################################################
+########################################################################################
 
 
 @njit(fastmath=True)  # ([float64(float64,float64),float32(float32,float32)])
-def ForceKernel(r, h):
+def ForceKernel(r: float, h: float) -> float:
     """
-    Returns the quantity (fraction of mass enclosed)/ r^3 for a cubic-spline mass distribution of compact support radius h. Used to calculate the softened gravitational force.
+    Returns the quantity (fraction of mass enclosed)/ r^3 for a cubic-spline
+    mass distribution of compact support radius h. Used to calculate the
+    softened gravitational force.
 
     Arguments:
     r - radius
@@ -183,13 +191,14 @@ def ForceKernel(r, h):
         )
 
 
-#########################################################################################################
+########################################################################################
 
 
 @njit(fastmath=True)
-def PotentialKernel(r, h):
+def PotentialKernel(r: float, h: float) -> float:
     """
-    Returns the equivalent of -1/r for a cubic-spline mass distribution of compact support radius h. Used to calculate the softened gravitational potential.
+    Returns the equivalent of -1/r for a cubic-spline mass distribution of
+    compact support radius h. Used to calculate the softened gravitational potential.
 
     Arguments:
     r - radius
@@ -217,33 +226,42 @@ def PotentialKernel(r, h):
         return -1.0 / r
 
 
-#########################################################################################################
+########################################################################################
 
 
-def KDPotential(pos, m, softening=None, theta=0.5, tree=None):
+def KDPotential(
+    pos: Any,
+    m: Any,
+    softening: Any = None,
+    theta: Any = 0.5,
+    tree: Any = None,
+) -> Any:
     """
-    Returns the approximate gravitational potential for a set of particles with positions x and masses m.
+    Returns the approximate gravitational potential for a set of particles with
+    positions x and masses m.
 
     Arguments:
     pos -- shape (N,3) array of particle positions
     m -- shape (N,) array of particle masses
 
     Keyword arguments:
-    softening -- shape (N,) array containing kernel support radii for gravitational softening
-    tree -- optional pre-generated kd-tree: this can contain any set of particles, not necessarily the target particles at pos (default None)
+    softening -- shape (N,) array containing kernel support radii for
+    gravitational softening
+    tree -- optional pre-generated kd-tree: this can contain any set of particles,
+    not necessarily the target particles at pos (default None)
 
     Parameters:
-    theta -- cell opening angle used to control force accuracy; smaller is slower (runtime ~ theta^-3) but more accurate. (default 1.0, gives ~1% accuracy)
+    theta -- cell opening angle used to control force accuracy; smaller is slower
+    (runtime ~ theta^-3) but more accurate. (default 1.0, gives ~1% accuracy)
 
     Returns:
-    Pynbody SimArray with the potentil energy
+    Pynbody SimArray with the potential energy
     """
 
     if softening is None:
         softening = np.zeros_like(m)
     if tree is None:
         tree = ConstructKDTree(np.float64(pos), np.float64(m), np.float64(softening))
-    result = np.zeros(len(m))
 
     pot = GetPotentialParallel(np.float64(pos), tree, theta=theta)
 
@@ -253,13 +271,19 @@ def KDPotential(pos, m, softening=None, theta=0.5, tree=None):
     return pot
 
 
-#########################################################################################################
+########################################################################################
 
 
 @njit(fastmath=True, parallel=True)
-def BruteForcePotentialTarget(x_target, x_source, m_source, softening=None):
+def BruteForcePotentialTarget(
+    x_target: Any,
+    x_source: Any,
+    m_source: Any,
+    softening: Any = None,
+) -> Any:
     """
-    Returns the exact gravitational potential in units of G due to a set of particles, at a set of positions that need not be the same as the particle positions.
+    Returns the exact gravitational potential in units of G due to a set of particles,
+    at a set of positions that need not be the same as the particle positions.
 
     Arguments:
     x_target -- shape (N,3) array of positions where the potential is to be evaluated
@@ -267,7 +291,8 @@ def BruteForcePotentialTarget(x_target, x_source, m_source, softening=None):
     m_source -- shape (N,) array of particle masses
 
     Keyword arguments:
-    softening -- shape (M,) array containing kernel support radii for gravitational softening
+    softening -- shape (M,) array containing kernel support radii for gravitational
+    softening
     """
 
     if softening is None:
@@ -288,13 +313,20 @@ def BruteForcePotentialTarget(x_target, x_source, m_source, softening=None):
     return potential
 
 
-#########################################################################################################
+########################################################################################
 
 
 @njit(fastmath=True, parallel=True)
-def BruteForceAccelTarget(x_target, x_source, m_source, softening=None):
+def BruteForceAccelTarget(
+    x_target: Any,
+    x_source: Any,
+    m_source: Any,
+    softening: Optional[Any] = None,
+) -> Any:
     """
-    Returns the gravitational acceleration in units of G produced by the mass of a set of particles, at a set of positions that need not be the same as the particle positions.
+    Returns the gravitational acceleration in units of G produced by the mass of a set
+    of particles, at a set of positions that need not be the same as the particle
+    positions.
 
     Arguments:
     x_target -- shape (N,3) array of positions where the potential is to be evaluated
@@ -302,7 +334,8 @@ def BruteForceAccelTarget(x_target, x_source, m_source, softening=None):
     m_source -- shape (N,) array of particle masses
 
     Keyword arguments:
-    softening -- shape (M,) array containing kernel support radii for gravitational softening
+    softening -- shape (M,) array containing kernel support radii for gravitational
+    softening
     """
 
     if softening is None:
@@ -324,13 +357,19 @@ def BruteForceAccelTarget(x_target, x_source, m_source, softening=None):
     return accel
 
 
-#########################################################################################################
+########################################################################################
 
 
 @njit(fastmath=True)
-def PotentialWalk(pos, node, phi, theta=0.5):
+def PotentialWalk(
+    pos: Any,
+    node: Any,
+    phi: Any,
+    theta: Any = 0.5,
+) -> Any:
     """
-    Returns the gravitational field in units of G at position x by performing the Barnes-Hut treewalk using the provided KD-tree node
+    Returns the gravitational field in units of G at position x by performing the
+    Barnes-Hut treewalk using the provided KD-tree node
 
     Arguments:
     pos - (3,) array containing position of interest
@@ -338,7 +377,8 @@ def PotentialWalk(pos, node, phi, theta=0.5):
     phi - temporary potential
 
     Parameters:
-    theta - cell opening angle used to control force accuracy; smaller is slower (runtime ~ theta^-3) but more accurate. (1.0, gives ~1 percent accuracy)
+    theta - cell opening angle used to control force accuracy; smaller is slower
+    (runtime ~ theta^-3) but more accurate. (1.0, gives ~1 percent accuracy)
     """
 
     dx = node.COM[0] - pos[0]
@@ -358,22 +398,32 @@ def PotentialWalk(pos, node, phi, theta=0.5):
     return phi
 
 
-#########################################################################################################
+########################################################################################
 
 
 @njit(fastmath=True)
-def ForceWalk(pos, node, g, softening=0.0, theta=0.5):
+def ForceWalk(
+    pos: Any,
+    node: Any,
+    g: Any,
+    softening: Any = 0.0,
+    theta: Any = 0.5,
+) -> Any:
     """
-    Returns the gravitational field at position pos by performing the Barnes-Hut treewalk using the provided KD-tree node
+    Returns the gravitational field at position pos by performing the Barnes-Hut
+    treewalk using the provided KD-tree node
 
     Arguments:
     pos - (3,) array containing position of interest
     node - KD-tree to walk
-    g - (3,) array containing initial value of the gravitational field, used when adding up the contributions in recursive calls
+    g - (3,) array containing initial value of the gravitational field, used when
+    adding up the contributions in recursive calls
 
     Parameters:
-    softening - softening radius of the particle at which the force is being evaluated - needed if you want the short-range force to be momentum-conserving
-    theta - cell opening angle used to control force accuracy; smaller is slower (runtime ~ theta^-3) but more accurate. (1.0, gives ~1percent accuracy)
+    softening - softening radius of the particle at which the force is being
+    evaluated - needed if you want the short-range force to be momentum-conserving
+    theta - cell opening angle used to control force accuracy; smaller is slower
+    (runtime ~ theta^-3) but more accurate. (1.0, gives ~1percent accuracy)
     """
 
     dx = node.COM[0] - pos[0]
@@ -407,22 +457,31 @@ def ForceWalk(pos, node, g, softening=0.0, theta=0.5):
     return g
 
 
-#########################################################################################################
+########################################################################################
 
 
 @njit(parallel=True, fastmath=True)
-def GetPotentialParallel(pos, tree, theta=0.5):
+def GetPotentialParallel(
+    pos: Any,
+    tree: Any,
+    theta: Any = 0.5,
+) -> Any:
     result = np.empty(pos.shape[0])
     for i in prange(pos.shape[0]):
         result[i] = PotentialWalk(pos[i], tree, 0.0, theta=theta)
     return result
 
 
-#########################################################################################################
+########################################################################################
 
 
 @njit(parallel=True, fastmath=True)
-def GetAccelParallel(pos, tree, softening, theta=0.5):
+def GetAccelParallel(
+    pos: Any,
+    tree: Any,
+    softening: Any,
+    theta: Any = 0.5,
+) -> np.ndarray:
     if softening is None:
         softening = np.zeros(len(pos), dtype=np.float64)
     result = np.empty(pos.shape)

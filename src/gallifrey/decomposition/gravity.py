@@ -1,23 +1,33 @@
-from pynbody import array, units
+from typing import Any
+
 import numpy as np
+from pynbody import array, units
+
 from gallifrey.decomposition import kdtree
 
 # Print some useful information
 debug = False
 
-#########################################################################################################
+########################################################################################
 
 
-def ConstructGrid(f, dimcell, target=None):
+def ConstructGrid(
+    f: Any,
+    dimcell: Any,
+    target: Any = None,
+) -> Any:
     """
-    ConstructGrid (based on pm in pynbody/gravity/calc.py) builds a density grid and Fourier transforms it
+    ConstructGrid (based on pm in pynbody/gravity/calc.py) builds a density grid and
+    Fourier transforms it
 
     Arguments:
-    f -- sim object with potential source. Must include a shape (M,3) array with positions, a M array with masses, and a M array with softening radii
+    f -- sim object with potential source. Must include a shape (M,3) array with
+    positions, a M array with masses, and a M array with softening radii
     dimcell -- linear size of the cubic cells. Can be a string with units or a scalar
 
     Keyword arguments:
-    target -- optional shape (N,3) array of target positions that have to be included into the grid. If None, the grid is built only around the source positions
+    target -- optional shape (N,3) array of target positions that have to be included
+    into the grid. If None, the grid is built only around the source positions
 
     Returns:
     pl -- origin of the grid
@@ -35,7 +45,8 @@ def ConstructGrid(f, dimcell, target=None):
 
     if dimcell < 0.25 * min(f["eps"]):
         print(
-            "WARNING: dimcell is %.2f %s, lower than 25 percent of the softening length %.2f %s\n"
+            "WARNING: dimcell is %.2f %s, lower than 25 percent of the softening "
+            " length %.2f %s\n"
             % (dimcell, f["eps"].units, min(f["eps"]), f["eps"].units)
         )
 
@@ -72,7 +83,7 @@ def ConstructGrid(f, dimcell, target=None):
         f["pos"],
         bins=ngrid,
         range=[(pl[0], pu[0]), (pl[1], pu[1]), (pl[2], pu[2])],
-        normed=False,
+        density=False,
         weights=f["mass"],
     )
     grid /= dimcell**3
@@ -89,23 +100,31 @@ def ConstructGrid(f, dimcell, target=None):
     return pl, kvecs, fou_rho_grid
 
 
-#########################################################################################################
+########################################################################################
 
 
-def pmesh(f, dimcell, target=None):
+def pmesh(
+    f: Any,
+    dimcell: Any,
+    target: Any = None,
+) -> Any:
     """
-    pmesh constructs a grid to sample the mass distribution f['mass'] and evaluates the gravitational potential
-    either for the same mass distribution (f['pos']), or at the positions 'target'
+    pmesh constructs a grid to sample the mass distribution f['mass'] and evaluates the
+    gravitational potential either for the same mass distribution (f['pos']), or at
+    the positions 'target'
 
     Arguments:
-    f -- sim object with potential source. Must include a shape (M,3) array with positions, a M array with masses, and a M array with softening radii
+    f -- sim object with potential source. Must include a shape (M,3) array with
+    positions, a M array with masses, and a M array with softening radii
     dimcell -- linear size of the cubic cells. Can be a string with units or a scalar
 
     Keyword arguments:
-    target -- (optional) shape (N,3) array of target positions where to evaluate the gravitational potential
+    target -- (optional) shape (N,3) array of target positions where to evaluate the
+    gravitational potential
 
     Returns:
-    numpy array, shape (M) or (N) with the potential energy evaluated either in f['pos'], or in target, respectively
+    numpy array, shape (M) or (N) with the potential energy evaluated either in
+    f['pos'], or in target, respectively
     """
 
     if isinstance(dimcell, str):
@@ -118,7 +137,7 @@ def pmesh(f, dimcell, target=None):
 
     lower, wnumber, fou_rho_grid = ConstructGrid(f, dimcell, target=target)
     ngrid = wnumber.shape[0]
-    shape = np.array([ngrid, ngrid, ngrid])
+    shape = [ngrid, ngrid, ngrid]
     wnsq = (wnumber**2).sum(axis=3)
     assert wnsq.shape == fou_rho_grid.shape
 
@@ -138,25 +157,39 @@ def pmesh(f, dimcell, target=None):
     return pot
 
 
-#########################################################################################################
+########################################################################################
 
 
-def GetPot(f, rxy_target, mode=None, tree=None, theta=0.5, grid=None, dimcell=0.5):
+def GetPot(
+    f: Any,
+    rxy_target: Any,
+    mode: Any = None,
+    tree: Any = None,
+    theta: Any = 0.5,
+    grid: Any = None,
+    dimcell: Any = 0.5,
+) -> Any:
     """
-    GetPot evaluates the gravitational potential generated by 'f' at the radii 'rxy_target', on the equatorial plane
+    GetPot evaluates the gravitational potential generated by 'f' at the radii
+    'rxy_target', on the equatorial plane
 
     Arguments:
-    f -- sim object - potential source composed by M particles. Must include a (M,3) array with positions, a M array with masses, and a M array with softening radii
+    f -- sim object - potential source composed by M particles. Must include a (M,3)
+    array with positions, a M array with masses, and a M array with softening radii
     rxy_target -- target radii where to compute the potential
 
     Keyword arguments:
     mode -- gravitational potential computation mode ['pm', 'tree', else]. See mordor.py
-    tree -- KD-tree object. If this parameter is given the potential is computed through this KD-tree object, otherwise a new tree is built
-    grid-- output of ConstructGrid(). It contains the grid used to sample the 'f'. If None, a new grid is built.
+    tree -- KD-tree object. If this parameter is given the potential is computed
+    through this KD-tree object, otherwise a new tree is built
+    grid-- output of ConstructGrid(). It contains the grid used to sample the 'f'.
+    If None, a new grid is built.
 
     Parameters:
-    theta -- cell opening angle used to control force accuracy when mode is 'tree'; smaller is slower (runtime ~ theta^-3)
-    dimcell -- cell size to control the accuracy of the potential evaluation when mode is 'pm'
+    theta -- cell opening angle used to control force accuracy when mode is 'tree';
+    smaller is slower (runtime ~ theta^-3)
+    dimcell -- cell size to control the accuracy of the potential evaluation when
+    mode is 'pm'
 
     Returns:
     gravitational potential energy in rxy_target in km^2 s^-2
@@ -173,13 +206,13 @@ def GetPot(f, rxy_target, mode=None, tree=None, theta=0.5, grid=None, dimcell=0.
     )
 
     if mode == "tree":
-        if tree == None:
+        if tree is None:
             tree = kdtree.ConstructKDTree(
                 np.float64(f["pos"]), np.float64(f["mass"]), np.float64(f["eps"])
             )
         potential = kdtree.GetPotentialParallel(np.float64(rs), tree, theta=theta)
     elif mode == "pm":
-        if grid == None:
+        if grid is None:
             potential = pmesh(f, dimcell, rs)
         else:
             if isinstance(dimcell, str):
@@ -190,7 +223,7 @@ def GetPot(f, rxy_target, mode=None, tree=None, theta=0.5, grid=None, dimcell=0.
                 )
 
             ngrid = grid[1].shape[0]
-            shape = np.array([ngrid, ngrid, ngrid])
+            shape = [ngrid, ngrid, ngrid]
             wnsq = (grid[1] ** 2).sum(axis=3)
             fou_pot_grid = np.zeros_like(grid[2])
             filt = np.where(wnsq != 0)
@@ -208,38 +241,52 @@ def GetPot(f, rxy_target, mode=None, tree=None, theta=0.5, grid=None, dimcell=0.
     for r in rxy_target:
         # Do four samples
         pot = []
-        for pos in [(r, 0, 0), (0, r, 0), (-r, 0, 0), (0, -r, 0)]:
+        for _pos in [(r, 0, 0), (0, r, 0), (-r, 0, 0), (0, -r, 0)]:
             pot.append(potential[i])
             i = i + 1
 
         pots.append(np.mean(pot))
 
     pots_u = units.G * f["mass"].units / f["pos"].units
-    pots = array.SimArray(pots, pots_u)
-    pots.sim = f.ancestor
+    pots_sim = array.SimArray(pots, pots_u)
+    pots_sim.sim = f.ancestor
 
-    return pots.in_units("km^2 s^-2")
-
-
-#########################################################################################################
+    return pots_sim.in_units("km^2 s^-2")
 
 
-def GetVcirc(f, rxy_target, mode=None, tree=None, theta=0.5, grid=None, dimcell=0.5):
+########################################################################################
+
+
+def GetVcirc(
+    f: Any,
+    rxy_target: Any,
+    mode: Any = None,
+    tree: Any = None,
+    theta: Any = 0.5,
+    grid: Any = None,
+    dimcell: Any = 0.5,
+) -> Any:
     """
-    GetVcirc evaluates the circular velocity on the plane at the radii 'rxy_target', due to the particles in 'f'
+    GetVcirc evaluates the circular velocity on the plane at the radii 'rxy_target',
+    due to the particles in 'f'
 
     Arguments:
-    f -- sim object - potential source composed by M particles. Must include a (M,3) array with positions, a M array with masses, and a M array with softening radii
+    f -- sim object - potential source composed by M particles. Must include a (M,3)
+    array with positions, a M array with masses, and a M array with softening radii
     rxy_target -- target radii where to compute the potential
 
     Keyword arguments:
     mode -- gravitational potential computation mode ['pm', 'tree', else]. See mordor.py
-    tree -- KD-tree object. If this parameter is given the potential is computed through this KD-tree object, otherwise a new tree is built
-    grid-- output of ConstructGrid(). It contains the grid used to sample the 'f'. If None, a new grid is built.
+    tree -- KD-tree object. If this parameter is given the potential is computed
+    through this KD-tree object, otherwise a new tree is built
+    grid-- output of ConstructGrid(). It contains the grid used to sample the
+    'f'. If None, a new grid is built.
 
     Parameters:
-    theta -- cell opening angle used to control force accuracy when mode is 'tree'; smaller is slower (runtime ~ theta^-3)
-    dimcell -- cell size to control the accuracy of the potential evaluation when mode is 'pm'
+    theta -- cell opening angle used to control force accuracy when mode is 'tree';
+    smaller is slower (runtime ~ theta^-3)
+    dimcell -- cell size to control the accuracy of the potential evaluation
+    when mode is 'pm'
 
     Returns:
     circular velocity in rxy_target in km s^-1
@@ -256,9 +303,9 @@ def GetVcirc(f, rxy_target, mode=None, tree=None, theta=0.5, grid=None, dimcell=
     )
 
     if mode == "tree":
-        if tree == None:
+        if tree is None:
             tree = kdtree.ConstructKDTree(
-                np.float64(["pos"]), np.float64(f["mass"]), np.float64(f["eps"])
+                np.float64(f["pos"]), np.float64(f["mass"]), np.float64(f["eps"])
             )
         accel = kdtree.GetAccelParallel(
             np.float64(rs), tree, np.float64(f["eps"]), theta=theta
@@ -271,10 +318,10 @@ def GetVcirc(f, rxy_target, mode=None, tree=None, theta=0.5, grid=None, dimcell=
                 dimcell.in_units(f["pos"].units, **f["pos"].conversion_context())
             )
 
-        if grid == None:
+        if grid is None:
             grid = ConstructGrid(f, dimcell, rs)
         ngrid = grid[1].shape[0]
-        shape = np.array([ngrid, ngrid, ngrid])
+        shape = [ngrid, ngrid, ngrid]
         wnsq = (grid[1] ** 2).sum(axis=3)
         fou_pot_grid = np.zeros_like(grid[2])
         filt = np.where(wnsq != 0)
@@ -316,7 +363,7 @@ def GetVcirc(f, rxy_target, mode=None, tree=None, theta=0.5, grid=None, dimcell=
         vels.append(vel)
 
     vels_u = (units.G * f["mass"].units / f["pos"].units) ** (1, 2)
-    vels = array.SimArray(vels, vels_u)
-    vels.sim = f.ancestor
+    vels_sim = array.SimArray(vels, vels_u)
+    vels_sim.sim = f.ancestor
 
-    return vels.in_units("km s^-1")
+    return vels_sim.in_units("km s^-1")

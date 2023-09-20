@@ -4,6 +4,7 @@
 # Data Files
 *.hdf5
 *.ewah
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
