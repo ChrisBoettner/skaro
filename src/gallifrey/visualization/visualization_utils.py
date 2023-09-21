@@ -156,7 +156,12 @@ class FigureProcessor:
         # align y labels
         self.figure.align_ylabels()
 
-    def save(self, file_name: str, sub_directory: Optional[str] = None) -> None:
+    def save(
+        self,
+        file_name: str,
+        sub_directory: Optional[str] = None,
+        save: Optional[bool] = True,
+    ) -> None:
         """
         Save figure in figures directory.
 
@@ -166,9 +171,12 @@ class FigureProcessor:
             Name and relative path of file in figures directory.
         sub_directory : Optional[str], optional
             Name of directory within figure directory. The default is None.
+        save: Optional[bool], optional
+            If False, only create file structure and don't actually save image. The
+            default is True.
+
 
         """
-
         if sub_directory:
             path = Path().figures(f"{sub_directory}/{file_name}")
         else:
@@ -177,8 +185,8 @@ class FigureProcessor:
         # create directory if it doesn't exist already
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
-
-        self.figure.savefig(path, bbox_inches="tight", pad_inches=0)
+        if save:
+            self.figure.savefig(path, bbox_inches="tight", pad_inches=0)
 
 
 def contourplot(

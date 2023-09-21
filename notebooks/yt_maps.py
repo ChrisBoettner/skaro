@@ -36,6 +36,7 @@ def plot_component_maps(
     hide_colorbar: bool = True,
     hide_axes: bool = False,
     save: bool = False,
+    figure_subdirectory: Optional[str] = None,
     figure_name_addon: Optional[str] = None,
 ) -> tuple[list[ParticleProjectionPlot], list[Figure]]:
     """
@@ -72,7 +73,10 @@ def plot_component_maps(
         Dictonary of additional font properties. The default is {"size": 16}.
     save : bool, optional
         If True, save figure to Figures directory. The default is False.
-    figure_name_addon : str, optional
+    figure_subdirectory: Optional[str], optional
+        The figure subdirectory in which to save plots. The default is None, which
+        defaults to the main figure directory.
+    figure_name_addon : Optional[str], optional
         Optional addon to default figure name. The default is None.
 
     Returns
@@ -136,12 +140,12 @@ def plot_component_maps(
         fig = plot.export_to_mpl_figure((1, 1), cbar_mode=cbar_mode)
 
         if save:
-            file_name = f"Galaxy_component_maps/{component}_map_{normal}"
+            if figure_subdirectory is None:
+                figure_subdirectory = "."
+            file_name = f"{figure_subdirectory}/{component}_map_{normal}"
             if figure_name_addon:
-                file_name = f"{file_name}_{figure_name_addon}.pdf"
-            else:
-                file_name = f"{file_name}.pdf"
-            path = Path().figures(f"{file_name}")
+                file_name = f"{file_name}_{figure_name_addon}"
+            path = Path().figures(f"{file_name}.pdf")
 
             # create directory if it doesn't exist already
             if not os.path.exists(os.path.dirname(path)):
@@ -174,6 +178,7 @@ def plot_planet_maps(
     subplot_columns: int = 3,
     subplot_pad: float | tuple[float, float] = (0, 0),
     save: bool = False,
+    figure_subdirectory: Optional[str] = None,
     figure_name_addon: Optional[str] = None,
 ) -> tuple[ParticleProjectionPlot, Figure]:
     """
@@ -217,6 +222,9 @@ def plot_planet_maps(
         Padding between subplots. The default is 1.
     save : bool, optional
         If True, save figure to Figures directory. The default is False.
+    figure_subdirectory: Optional[str], optional
+        The figure subdirectory in which to save plots. The default is None, which
+        defaults to the main figure directory.
     figure_name_addon : str, optional
         Optional addon to default figure name. The default is None.
 
@@ -293,12 +301,12 @@ def plot_planet_maps(
         else:
             weight = weight_field[-1]
 
-        file_name = f"Planet_maps/planet_map_{normal}_weight={weight}"
+        if figure_subdirectory is None:
+            figure_subdirectory = "."
+        file_name = f"{figure_subdirectory}/planet_map_{normal}_weight={weight}"
         if figure_name_addon:
-            file_name = f"{file_name}_{figure_name_addon}.pdf"
-        else:
-            file_name = f"{file_name}.pdf"
-        path = Path().figures(f"{file_name}")
+            file_name = f"{file_name}_{figure_name_addon}"
+        path = Path().figures(f"{file_name}.pdf")
 
         # create directory if it doesn't exist already
         if not os.path.exists(os.path.dirname(path)):
