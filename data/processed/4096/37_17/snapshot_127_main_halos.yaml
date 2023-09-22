@@ -1,10 +1,12 @@
-MW:         # ID
-  X: 4.67899375e+04           # in kpc
-  Y: 5.03117969e+04           # in kpc
-  Z: 4.78086406e+04           # in kpc
-  M: 9.66976602e+11           # in solar masses
-M31:         # ID
-  X: 4.64577227e+04           # in kpc
-  Y: 5.07028906e+04           # in kpc
-  Z: 4.79945820e+04           # in kpc
-  M: 1.23195661e+12           # in solar masses
+MW:         # Name
+  X: 4.67899375e+04             # in kpc
+  Y: 5.03117969e+04             # in kpc
+  Z: 4.78086406e+04             # in kpc
+  M: 9.66976602e+11             # in solar masses
+  ID: 127000000000002           # halo ID
+M31:         # Name
+  X: 4.64577227e+04             # in kpc
+  Y: 5.07028906e+04             # in kpc
+  Z: 4.79945820e+04             # in kpc
+  M: 1.23195661e+12             # in solar masses
+  ID: 127000000000001           # halo ID

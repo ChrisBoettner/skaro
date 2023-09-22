@@ -10,6 +10,7 @@ import pathlib
 from typing import Any, Optional
 
 import numpy as np
+import pandas as pd
 from ruamel.yaml import YAML
 from unyt.array import unyt_array, unyt_quantity
 from yt.data_objects.data_containers import YTDataContainer
@@ -19,6 +20,7 @@ from yt.data_objects.selection_objects.spheroids import YTSphere
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
+from gallifrey.data.load import load_AHF_particles
 from gallifrey.data.paths import Path
 from gallifrey.filter import Filter
 from gallifrey.utilities.math import calculate_pca
@@ -50,6 +52,7 @@ class HaloContainer:
         self.Y: float | unyt_quantity
         self.Z: float | unyt_quantity
         self.M: float | unyt_quantity
+        self.ID: int
 
         for key, value in property_dict.items():
             setattr(self, key, value)
@@ -273,6 +276,71 @@ class HaloContainer:
 
         return getattr(self.ds, "disk")(centre, normal, radius, height, **kwargs)
 
+    @staticmethod
+    def extract_particle_ids(
+        halo_ID: int,
+        snapshot: int | str,
+        resolution: int,
+        sim_id: str = "09_18",
+        **kwargs: Any,
+    ) -> pd.DataFrame:
+        """
+        Return dataframe with all particle IDs associated with this halo for a given
+        halo ID and snapshot properties.
+        Parameters
+        ----------
+        halo_ID : int
+            The halo ID associated with the particles.
+        snapshot : int | str
+            Snapshot number, should be between 0 and 127.
+        resolution : int, optional
+            Particle resolution of the simulation, should be 2048, 4096 or 8192.
+        sim_id : str, optional
+            ID of the concrete simulation run. The default is "09_18".
+        **kwargs : Any
+            Further arguments passed to load_AHF_particles.
+
+        Raises
+        ------
+        AttributeError
+            Raised if the halo ID is not found in the AHF output.
+
+        Returns
+        -------
+        pd.DataFrame
+            The particle IDs and corresponding particle types associated with the halo.
+
+        """
+        # Load AHF data
+        ahf_particles = load_AHF_particles(snapshot, resolution, sim_id, **kwargs)
+
+        # Check where halo data begins and ends
+        start_ID = str(halo_ID)
+        end_ID = str(halo_ID + 1)
+        start_idx = end_idx = None
+        for idx, line in enumerate(ahf_particles):
+            if start_ID in line:
+                start_idx = idx
+            elif end_ID in line:
+                end_idx = idx
+                break
+
+        if start_idx is None:
+            raise AttributeError("Halo ID not in AHF particle file.")
+
+        if end_idx is None:
+            end_idx = -1  # assume its the last halo and all data up to end is used
+
+        # convert and save in DataFrame format
+        halo_particles = np.array(
+            [line.split("\t") for line in ahf_particles[start_idx + 1 : end_idx]]
+        )
+        halo_particle_df = pd.DataFrame(
+            halo_particles, columns=("ParticleIDs", "PartType")
+        ).astype(int)
+
+        return halo_particle_df.sort_values(by=["PartType", "ParticleIDs"])
+
 
 class Halo(HaloContainer):
     """
@@ -289,6 +357,7 @@ class Halo(HaloContainer):
         sim_id: str = "09_18",
         snapshot: int = 127,
         path: Optional[str] = None,
+        test_flag: bool = False,
     ) -> None:
         """
         Add details to attributes, construct path and load halo information
@@ -305,13 +374,17 @@ class Halo(HaloContainer):
             ID of simulation run.
         snapshot : TYPE, optional
             Index of snapshot. The default is 127.
-        path : Optional[str]
+        path : Optional[str], optional
             Absolute path to file.
+        test_flag: bool, optional
+            If true, assume halo belongs to local test. Passes corresponding information
+            to particle_IDs to identify correct file path. The default is False.
         """
         self.halo_id = halo_id
         self.resolution = resolution
         self.sim_id = sim_id
         self.snapshot = f"00{snapshot}"[-3:]
+        self.test_flag = test_flag
 
         self.ds = ds
         self.filter = Filter(self.ds)
@@ -391,6 +464,72 @@ class Halo(HaloContainer):
                 self.load()  # reload file
         else:
             raise AttributeError("Path must be str with absolute path to file.")
+
+    def particle_IDs(
+        self,
+        halo_ID: Optional[int] = None,
+        id_path: Optional[str] = None,
+        save: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Return dataframe with all particle IDs associated with this halo (based on
+        halo ID) using the AHF output.
+
+        Parameters
+        ----------
+        halo_ID : Optional[int], optional
+            The halo ID associated with the particles. The default is None, which
+            defaults to the ID attribute of the Halo object.
+        id_path : Optional[str], optional
+            Path to ID file, in order to load/save file. The default is None,
+            which looks in the data/processed directory.
+        save: bool, optional
+            Decide if ID file should be saved, if it was just created.
+        force_calculation: bool, optional
+
+        Raises
+        ------
+        AttributeError
+            Raised if the halo ID is not found in the AHF output.
+
+        Returns
+        -------
+        pd.DataFrame
+            The particle IDs and corresponding particle types associated with the halo.
+
+        """
+        if halo_ID is None:
+            if not hasattr(self, "ID"):
+                raise AttributeError(
+                    "Halo needs ID attribute to load corresponding AHF particles."
+                )
+            halo_ID = self.ID
+
+        # choose path
+        if id_path is None:
+            path = Path().processed_data(
+                f"{self.resolution}/{self.sim_id}/"
+                f"snapshot_{self.snapshot}_{self.halo_id}_particle_IDs.csv"
+            )
+        else:
+            path = id_path
+
+        # load or create particle IDs
+        try:
+            particle_id_dataframe = pd.read_csv(path)
+
+        except FileNotFoundError:
+            particle_id_dataframe = self.extract_particle_ids(
+                halo_ID,
+                self.snapshot,
+                self.resolution,
+                self.sim_id,
+                test_flag=self.test_flag,
+            )
+            if save:
+                particle_id_dataframe.to_csv(path, index=None)
+
+        return particle_id_dataframe
 
 
 class MainHalo(Halo):

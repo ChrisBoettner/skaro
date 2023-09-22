@@ -99,10 +99,13 @@ def data_setup(
 
     with Timer("Loading Hestia Snapshot..."):
         ds, snapshot_path = load_snapshot(snapshot, resolution, test_flag=test_flag)
-        mw = MainHalo("MW", resolution, ds, sim_id=sim_id)
+        mw = MainHalo("MW", resolution, ds, sim_id=sim_id, test_flag=test_flag)
 
         filters = Filter(ds)
         fields = Fields(ds)
+
+    with Timer("Loading ParticleIDs..."):
+        mw_IDs = mw.particle_IDs()
 
     # %%
     with Timer("Adding Stars..."):
@@ -146,7 +149,10 @@ def data_setup(
         fields.add_planar_radius(normal_vector)
 
         component_dataframe = galaxy_components(
-            mw, snapshot_path + f"/snapshot_{snapshot}"
+            halo=mw,
+            snapshot_path=snapshot_path + f"/snapshot_{snapshot}",
+            mode="ID",
+            id_list=mw_IDs["ParticleIDs"],
         )
         filters.add_galaxy_components(component_dataframe)
 
@@ -166,12 +172,5 @@ def data_setup(
                 planet_hosting_imf_bounds,
                 **planet_params,
             )
-
-    with Timer("Other Calculations..."):
-        mw.insert(
-            "BULGE_END",
-            6.4,
-            "in kpc. Rough estimate for run 09_18 based on Figure 9 in Libeskind2020 ",
-        )
 
     return ds, mw, stellar_model, imf, planet_model, snapshot_path

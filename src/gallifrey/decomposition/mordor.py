@@ -68,13 +68,18 @@ def get_half_mass_radius(galaxy: IndexedSubSnap) -> float:
 def calculate_galaxy_decomposition(
     snapshot_path: str,
     halo: Optional[Halo] = None,
+    mode: str = "ID",
     centre: Optional[unyt_array] = None,
     radius: Optional[unyt_quantity] = None,
+    id_list: Optional[list] = None,
 ) -> pd.DataFrame:
     """
     Calculate morphological decomposition using mordor code for a cosmo_sim snapshot for
-    a galaxy in the snapshot. Galaxy is spherically cut out of snapshot and then
-    processed.
+    a galaxy in the snapshot.
+    Galaxy can be either:
+        - spherically cut out of snapshot and then processed, using mode = "sphere", or
+        - filtered by a list of ParticleIDs, using mode = "ID".
+
     Returns Dataframe where 'Component' corresponds to the assigned galaxy component
     and 'ParticleIDs' to the evaluated star particles.
 
@@ -93,6 +98,10 @@ def calculate_galaxy_decomposition(
     halo : Halo, optional
         Halo object that contains information about the halo in question, include
         prescriptions for centre() and radius(). The default is None.
+    mode: bool, optional
+        Mode by which snapshot is filtered. Can be "ID", which filters based on particle
+        IDs, or "sphere", which filters based by a spherical region. The default is
+        "ID".
     centre : Optional[unyt_array], optional
         Unyt array describing the centre of the sphere around galaxy which is cut out.
         The default is None, which uses the .centre() method of halo.
@@ -100,6 +109,9 @@ def calculate_galaxy_decomposition(
         Unyt array describing the radius of the sphere around galaxy which is cut out.
         The default is None, which uses 0.1 * virial_radius of the halo as determined by
         the .virial_radius() method of halo.
+    id_list : Optional[list], optional
+        The ID list to filter by. The default is None, which uses the ID list of the
+        halo object using the .particle_IDs() method.
 
     Returns
     -------
@@ -121,24 +133,47 @@ def calculate_galaxy_decomposition(
         warnings.simplefilter("ignore")
         data = pynbody.load(snapshot_path)
 
-    # cutout sphere around galaxy of interest
-    if ((centre is None) or (radius is None)) and (halo is None):
-        raise ValueError("Either halo, or radius AND centre must be given.")
+    match mode:
+        case "ID":
+            if (halo is None) and (id_list is None):
+                raise ValueError("Either halo, or id_list must be given in 'ID' mode.")
 
-    if centre is None:
-        assert isinstance(halo, Halo)
-        centre = halo.centre()
-    if radius is None:
-        assert isinstance(halo, Halo)
-        radius = 0.1 * halo.virial_radius()
+            if id_list is None:
+                if not isinstance(halo, Halo):
+                    raise TypeError("halo is no Halo obj.")
+                id_list = halo.particle_IDs()
 
-    centre_value = centre.to("code_length").value
-    radius_value = radius.to("code_length").value
+            filt = np.isin(data["iord"], id_list, assume_unique=True)
 
-    galaxy = data[pynbody.filt.Sphere(radius_value, centre_value)]
+        case "sphere":
+            # cutout sphere around galaxy of interest
+            if (halo is None) and ((centre is None) or (radius is None)):
+                raise ValueError(
+                    "Either halo, or radius AND centre must be given in "
+                    "'sphere' mode."
+                )
+
+            if centre is None:
+                if not isinstance(halo, Halo):
+                    raise TypeError("halo is no Halo obj.")
+                centre = halo.centre()
+            if radius is None:
+                if not isinstance(halo, Halo):
+                    raise TypeError("halo is no Halo obj.")
+                radius = 0.1 * halo.virial_radius()
+
+            centre_value = centre.to("code_length").value
+            radius_value = radius.to("code_length").value
+
+            filt = pynbody.filt.Sphere(radius_value, centre_value)
+
+        case _:
+            raise ValueError("mode must be either 'ID' or 'sphere'.")
+
+    galaxy = data[filt]
 
     # centre data on sphere centre
-    galaxy["pos"] -= centre_value
+    # galaxy["pos"] -= centre_value
 
     # set physical units as default
     galaxy.physical_units()
@@ -211,8 +246,9 @@ def galaxy_components(
     halo: Halo,
     snapshot_path: Optional[str] = None,
     decomposition_path: Optional[str] = None,
-    save: Optional[bool] = True,
-    **kwargs: dict[str, Any],
+    save: bool = True,
+    force_calculation: bool = False,
+    **kwargs: Any,
 ) -> pd.DataFrame:
     """
 
@@ -225,12 +261,14 @@ def galaxy_components(
     snapshot_path : Optional[str], optional
         Path to snapshot that is used as data source. Needed if decomposition file is
         not found. The default is None.
-    snapshot_path : Optional[str], optional
+    decomposition_path : Optional[str], optional
         Path to decomposition file, in order to load/save file. The default is None,
         which looks in the data/processed directory.
-    save: Optional[bool], optional
+    save: bool, optional
         Decide if decomposition file should be saved, if it was just created.
-    **kwargs: dict[str, Any]
+    force_calculation: bool, optional
+        Forces calculation of galaxy decomposition even if it could be loaded from file.
+    **kwargs: Any
         Further arguments passed to calculate_galaxy_decomposition.
 
     Returns
@@ -248,26 +286,37 @@ def galaxy_components(
     else:
         path = decomposition_path
 
-    try:
-        # try to load decomposition
-        assignment = pd.read_csv(path)
-        logger.info("DECOMPOSITION: Loading decomposition file.")
-
-    except FileNotFoundError:
-        # if file isn't found, calculate decomposition
-        logger.warn(
-            "WARNING: Decomposition file not found. Calculating morphological "
-            "decomposition."
-        )
-
+    if force_calculation:
         if snapshot_path is None:
             raise ValueError(
                 "snapshot_path must be given to calculate morphological "
                 "decomposition."
             )
 
+        # if forced, recalculate assignment, independent if file could be loaded
         assignment = calculate_galaxy_decomposition(snapshot_path, halo, **kwargs)
         if save:
             assignment.to_csv(path, index=None)
+
+    else:
+        try:
+            # try to load decomposition
+            assignment = pd.read_csv(path)
+            logger.info("DECOMPOSITION: Loading decomposition file.")
+
+        except FileNotFoundError:
+            # if file isn't found, calculate decomposition
+            logger.warn(
+                "WARNING: Decomposition file not found. Trying with "
+                "force_calculation=True."
+            )
+            galaxy_components(
+                halo=halo,
+                snapshot_path=snapshot_path,
+                decomposition_path=decomposition_path,
+                save=save,
+                force_calculation=True,
+                **kwargs,
+            )
 
     return assignment

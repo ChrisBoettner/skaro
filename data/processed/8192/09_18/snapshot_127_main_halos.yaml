@@ -1,11 +1,12 @@
-MW:         # ID
-  BULGE_END: 6.4  # in kpc. Rough estimate for run 09_18 based on Figure 9 in Libeskind2020 
-  X: 4.67936523e+04           # in kpc
-  Y: 4.90552930e+04           # in kpc
-  Z: 4.98811797e+04           # in kpc
-  M: 1.94155237e+12           # in solar masses
-M31:         # ID
-  X: 4.73092422e+04           # in kpc
-  Y: 4.88026602e+04           # in kpc
-  Z: 5.00027344e+04           # in kpc
-  M: 2.12610292e+12           # in solar masses
+MW:         # Name
+  X: 4.67936523e+04             # in kpc
+  Y: 4.90552930e+04             # in kpc
+  Z: 4.98811797e+04             # in kpc
+  M: 1.94155237e+12             # in solar masses
+  ID: 127000000000003           # halo ID
+M31:         # Name
+  X: 4.73092422e+04             # in kpc
+  Y: 4.88026602e+04             # in kpc
+  Z: 5.00027344e+04             # in kpc
+  M: 2.12610292e+12             # in solar masses
+  ID: 127000000000002           # halo ID

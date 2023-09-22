@@ -9,7 +9,7 @@ Created on Mon Feb 13 20:23:23 2023
 import os
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 
 from ruamel.yaml import YAML, CommentedMap
 
@@ -84,19 +84,20 @@ class HaloPreprocessingAbstract(ABC):
 
     @staticmethod
     def commented_yaml_string(
-        ID: str,
+        ID: int,
         X: float,
         Y: float,
         Z: float,
         M: float,
+        NAME: Optional[str | int] = None,
     ) -> str:
         """
         Template string that data is filled in to be turned into yaml.
 
         Parameters
         ----------
-        ID : str
-            ID to identify halo.
+        ID : int
+            ID of the halo (e.g. given by the halo finder).
         X : float
             X coordinate of halo in kpc.
         Y : float
@@ -105,6 +106,9 @@ class HaloPreprocessingAbstract(ABC):
             Z coordinate of halo in kpc.
         M : float
             Mass in solar masses.
+        NAME : Optional[str | int], optional
+            Optional name to identify halo. If None is given, default to ID. The default
+            is None.
 
         Returns
         -------
@@ -112,12 +116,16 @@ class HaloPreprocessingAbstract(ABC):
             Template string.
 
         """
+        if NAME is None:
+            NAME = ID
+
         yaml_string = f"""
-        {ID}: # ID
-            X: {X} # in kpc
-            Y: {Y} # in kpc
-            Z: {Z} # in kpc
-            M: {M} # in solar masses
+        {NAME}: # Name
+            X: {X}   # in kpc
+            Y: {Y}   # in kpc
+            Z: {Z}   # in kpc
+            M: {M}   # in solar masses
+            ID: {ID} # halo ID
         """
         return yaml_string
 
@@ -174,19 +182,21 @@ class MainHaloPreprocessing(HaloPreprocessingAbstract):
 
             # fill MW information
             information_string = self.commented_yaml_string(
-                "MW",
+                simulation_run[2],
                 simulation_run[29],
                 simulation_run[30],
                 simulation_run[31],
                 simulation_run[5],
+                "MW",
             )
             # fill M31 information
             information_string += self.commented_yaml_string(
-                "M31",
+                simulation_run[1],
                 simulation_run[26],
                 simulation_run[27],
                 simulation_run[28],
                 simulation_run[4],
+                "M31",
             )
 
             # turn to yaml

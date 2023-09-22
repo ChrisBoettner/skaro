@@ -65,7 +65,7 @@ class Filter:
 
         self.ds.add_particle_filter("stars")
 
-    def add_halo_stars(self, ParticleIDs: ArrayLike) -> None:
+    def add_stars_by_ID(self, ParticleIDs: ArrayLike) -> None:
         """
         Add filter to ds that selects PartType4 particles based on ID.
 
@@ -79,7 +79,7 @@ class Filter:
             requires=["ParticleIDs"],
             filtered_type="PartType4",
         )
-        def halo_stars(
+        def stars_by_ID(
             pfilter: ParticleFilter,
             data: Any,
         ) -> ArrayLike:
@@ -90,9 +90,9 @@ class Filter:
             )
             return id_filter
 
-        self.ds.add_particle_filter("halo_stars")
+        self.ds.add_particle_filter("stars_by_ID")
 
-    def add_halo_gas(self, ParticleIDs: ArrayLike) -> None:
+    def add_gas_by_ID(self, ParticleIDs: ArrayLike) -> None:
         """
         Add filter to ds that selects PartType0 particles based on ID.
 
@@ -106,7 +106,7 @@ class Filter:
             requires=["ParticleIDs"],
             filtered_type="PartType0",
         )
-        def halo_gas(
+        def gas_by_ID(
             pfilter: ParticleFilter,
             data: Any,
         ) -> ArrayLike:
@@ -117,7 +117,7 @@ class Filter:
             )
             return id_filter
 
-        self.ds.add_particle_filter("halo_gas")
+        self.ds.add_particle_filter("gas_by_ID")
 
     def add_galaxy_components(self, component_dataframe: pd.DataFrame) -> None:
         """
@@ -125,6 +125,7 @@ class Filter:
         halo). The decomposition is performed by the mordor code (Zana2022).
         For our purposes we classify both thick disk and pseudo-bulge stars as
         thick disk.
+        Also adds field 'galaxy_stars' with all star particles.
 
         Parameters
         ----------
@@ -167,10 +168,19 @@ class Filter:
                 component="halo",
             )
 
+        @yt.particle_filter(requires=["ParticleIDs"], filtered_type="stars")
+        def galaxy_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
+            return _create_component_mask(
+                component_dataframe,
+                data["stars", "ParticleIDs"].astype(int).value,
+                component="all",
+            )
+
         self.ds.add_particle_filter("bulge_stars")
         self.ds.add_particle_filter("thin_disk_stars")
         self.ds.add_particle_filter("thick_disk_stars")
         self.ds.add_particle_filter("halo_stars")
+        self.ds.add_particle_filter("galaxy_stars")
 
 
 def _create_component_mask(
@@ -211,6 +221,7 @@ def _create_component_mask(
             "thick_disk": [2, 3],
             "bulge": [4],
             "halo": [5],
+            "all": [0, 1, 2, 3, 4, 5],
         }
 
     if component not in component_dict.keys():

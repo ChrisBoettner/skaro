@@ -24,7 +24,7 @@ def load_snapshot(
     test_flag: bool = False,
 ) -> tuple[ArepoHDF5Dataset, str]:
     """
-
+    Load HESTIA snapshot.
 
     Parameters
     ----------
@@ -54,8 +54,7 @@ def load_snapshot(
 
     """
     if test_flag:  # if local system, load the test file
-        path = Path().raw_data(r"snapdir_127/snapshot_127.0.hdf5")
-
+        path = Path().raw_data("snapdir_127/snapshot_127.0.hdf5")
         index_name = "test_snapshot.index5_7.ewah"
 
     else:
@@ -96,3 +95,80 @@ def load_snapshot(
         raise FileNotFoundError("Snapshot not found.")
 
     return dataset, str(path.parent)
+
+
+def load_AHF_particles(
+    snapshot: int,
+    resolution: int,
+    sim_id: str = "09_18",
+    test_flag: bool = False,
+) -> list[str]:
+    """
+    Load particle file that associates each halo with its particles. In the file
+    the first number is usually the ParticleID and the second numver is the PartType.
+    If the second number is longer than one digit, it is the halo ID instead and all
+    the following particles belong to that halo.
+
+    Parameters
+    ----------
+    snapshot : int
+        Snapshot number, currently only implemented for 127.
+    resolution : int, optional
+        Particle resolution of the simulation, should be 2048, 4096 or 8192.
+    sim_id : str, optional
+        ID of the concrete simulation run. The default is "09_18".
+    test_flag : bool, optional
+        If True, load local test snapshot. The default is False.
+
+    Raises
+    ------
+    NotImplementedError
+        Raised when snapshot is not 127.
+    FileNotFoundError
+        Raised when no ValueError occured but the file still could not be
+        loaded.
+
+    Returns
+    -------
+    ArepoHDF5Dataset
+        yt dataset object.
+    Path
+        Path to snapshot directory.
+
+    """
+    if test_flag:  # if local system, load the test file
+        path = Path().raw_data("HESTIA_100Mpc_4096_09_18.127.z0.000.AHF_particles")
+
+    else:
+        # check if snapshot is available
+        if snapshot not in (127, "127"):
+            raise NotImplementedError(
+                "load_AHF_particles currently only implemented for snapshot 127. "
+                "For other particles, need to adjust the redshift-snapshot conversion."
+            )
+        # add leading zeros to snapshot if necessary
+        snapshot_string = f"00{snapshot}"[-3:]
+
+        path = Path().raw_data(rf"{resolution}/GAL_FOR/{sim_id}")
+        match resolution:
+            case 8192:
+                path = path.joinpath(
+                    rf"AHF_output_2x2.5Mpc/HESTIA_100Mpc_{resolution}_{sim_id}."
+                    rf"{snapshot_string}.z0.000.AHF_particles"
+                )
+
+            case 2048 | 4096:
+                path = path.joinpath(
+                    rf"AHF_output/HESTIA_100Mpc_{resolution}_{sim_id}."
+                    rf"{snapshot_string}.z0.000.AHF_particles"
+                )
+
+            case _:
+                raise ValueError("Resolution should be 2048, 4096 or 8192.")
+    try:
+        with open(path) as file:
+            ahf_particles = [line.rstrip() for line in file]
+    except FileNotFoundError:
+        raise FileNotFoundError("AHF particles file not found.")
+
+    return ahf_particles
