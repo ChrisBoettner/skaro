@@ -137,6 +137,14 @@ class Filter:
         """
 
         @yt.particle_filter(requires=["ParticleIDs"], filtered_type="stars")
+        def unbound_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
+            return _create_component_mask(
+                component_dataframe,
+                data["stars", "ParticleIDs"].astype(int).value,
+                component="unbound",
+            )
+
+        @yt.particle_filter(requires=["ParticleIDs"], filtered_type="stars")
         def bulge_stars(pfilter: ParticleFilter, data: Any) -> ArrayLike:
             return _create_component_mask(
                 component_dataframe,
@@ -176,6 +184,7 @@ class Filter:
                 component="all",
             )
 
+        self.ds.add_particle_filter("unbound_stars")
         self.ds.add_particle_filter("bulge_stars")
         self.ds.add_particle_filter("thin_disk_stars")
         self.ds.add_particle_filter("thick_disk_stars")
@@ -217,6 +226,7 @@ def _create_component_mask(
     # category
     if component_dict is None:
         component_dict = {
+            "unbound": [0],
             "thin_disk": [1],
             "thick_disk": [2, 3],
             "bulge": [4],

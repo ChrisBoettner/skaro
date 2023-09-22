@@ -172,9 +172,6 @@ def calculate_galaxy_decomposition(
 
     galaxy = data[filt]
 
-    # centre data on sphere centre
-    # galaxy["pos"] -= centre_value
-
     # set physical units as default
     galaxy.physical_units()
 
@@ -292,7 +289,7 @@ def galaxy_components(
                 "snapshot_path must be given to calculate morphological "
                 "decomposition."
             )
-
+        logger.info("DECOMPOSITION: Calculating decomposition.")
         # if forced, recalculate assignment, independent if file could be loaded
         assignment = calculate_galaxy_decomposition(snapshot_path, halo, **kwargs)
         if save:

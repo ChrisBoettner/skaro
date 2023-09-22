@@ -36,6 +36,7 @@ def data_setup(
     star_age_bounds: tuple[float, float] = (0.02, np.inf),
     planet_hosting_imf_delta: float = 0.05,
     planet_params: Optional[dict[str, Any]] = None,
+    calculate_components: bool = True,
 ) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel, str]:
     """
     Load Hestia simulation snapshot, create Milky way halo object and
@@ -71,6 +72,9 @@ def data_setup(
         formation time in the NGPPS model.
     planet_params: dict[str, Any], optional
         Additional parameter passed to fields.add_planets
+    calculate_components: bool, optional
+        If True, calculates galaxy components and adds correspoding fields. The default
+        is True.
 
     Returns
     -------
@@ -148,13 +152,14 @@ def data_setup(
         fields.add_height(normal_vector)
         fields.add_planar_radius(normal_vector)
 
-        component_dataframe = galaxy_components(
-            halo=mw,
-            snapshot_path=snapshot_path + f"/snapshot_{snapshot}",
-            mode="ID",
-            id_list=mw_IDs["ParticleIDs"],
-        )
-        filters.add_galaxy_components(component_dataframe)
+        if calculate_components:
+            component_dataframe = galaxy_components(
+                halo=mw,
+                snapshot_path=snapshot_path + f"/snapshot_{snapshot}",
+                mode="ID",
+                id_list=mw_IDs["ParticleIDs"],
+            )
+            filters.add_galaxy_components(component_dataframe)
 
     # %%
     with Timer("Adding Planets..."):

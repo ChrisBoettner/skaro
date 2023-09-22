@@ -7,6 +7,7 @@ Created on Tue Feb 14 11:37:46 2023
 """
 
 import pathlib
+from collections import Counter
 from typing import Any, Optional
 
 import numpy as np
@@ -282,6 +283,7 @@ class HaloContainer:
         snapshot: int | str,
         resolution: int,
         sim_id: str = "09_18",
+        remove_subhalos: bool = True,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """
@@ -297,6 +299,9 @@ class HaloContainer:
             Particle resolution of the simulation, should be 2048, 4096 or 8192.
         sim_id : str, optional
             ID of the concrete simulation run. The default is "09_18".
+        remove_subhalos: bool, optional
+            Remove particles associated with substructures by filtering all IDs that
+            occur more than once.
         **kwargs : Any
             Further arguments passed to load_AHF_particles.
 
@@ -331,10 +336,18 @@ class HaloContainer:
         if end_idx is None:
             end_idx = -1  # assume its the last halo and all data up to end is used
 
+        # create sublist
+        halo_particles = ahf_particles[start_idx + 1 : end_idx]
+
+        # filter out particles that occur more than once
+        if remove_subhalos:
+            num_occurences = Counter(ahf_particles)
+            halo_particles = [
+                item for item in halo_particles if num_occurences[item] == 1
+            ]
+
         # convert and save in DataFrame format
-        halo_particles = np.array(
-            [line.split("\t") for line in ahf_particles[start_idx + 1 : end_idx]]
-        )
+        halo_particles = np.array([line.split("\t") for line in halo_particles])
         halo_particle_df = pd.DataFrame(
             halo_particles, columns=("ParticleIDs", "PartType")
         ).astype(int)
@@ -470,6 +483,7 @@ class Halo(HaloContainer):
         halo_ID: Optional[int] = None,
         id_path: Optional[str] = None,
         save: bool = True,
+        remove_subhalos: bool = True,
     ) -> pd.DataFrame:
         """
         Return dataframe with all particle IDs associated with this halo (based on
@@ -485,7 +499,9 @@ class Halo(HaloContainer):
             which looks in the data/processed directory.
         save: bool, optional
             Decide if ID file should be saved, if it was just created.
-        force_calculation: bool, optional
+        remove_subhalos: bool, optional
+            Remove particles associated with substructures by filtering all IDs that
+            occur more than once.
 
         Raises
         ------
@@ -507,9 +523,12 @@ class Halo(HaloContainer):
 
         # choose path
         if id_path is None:
+            # save file with or without subhalo structure seperately
+            subhalos_suffix = "_no_subhalos" if remove_subhalos else ""
+
             path = Path().processed_data(
-                f"{self.resolution}/{self.sim_id}/"
-                f"snapshot_{self.snapshot}_{self.halo_id}_particle_IDs.csv"
+                f"{self.resolution}/{self.sim_id}/snapshot_{self.snapshot}_"
+                f"{self.halo_id}_particle_IDs{subhalos_suffix}.csv"
             )
         else:
             path = id_path
@@ -524,6 +543,7 @@ class Halo(HaloContainer):
                 self.snapshot,
                 self.resolution,
                 self.sim_id,
+                remove_subhalos=remove_subhalos,
                 test_flag=self.test_flag,
             )
             if save:

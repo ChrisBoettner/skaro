@@ -25,4 +25,7 @@ from gallifrey.setup import data_setup
 num_embryos = 50
 host_star_mass = (0.7, 1)
 ds, mw, stellar_model, imf, planet_model, path = data_setup(ngpps_num_embryos=num_embryos,
-                                                            ngpps_star_masses=host_star_mass)
+                                                            ngpps_star_masses=host_star_mass,
+                                                            calculate_components=False)
+
+print("Remove duplicate IDs")
