@@ -108,9 +108,6 @@ def data_setup(
         filters = Filter(ds)
         fields = Fields(ds)
 
-    with Timer("Loading ParticleIDs..."):
-        mw_IDs = mw.particle_IDs()
-
     # %%
     with Timer("Adding Stars..."):
         stellar_model = StellarModel()
@@ -156,8 +153,7 @@ def data_setup(
             component_dataframe = galaxy_components(
                 halo=mw,
                 snapshot_path=snapshot_path + f"/snapshot_{snapshot}",
-                mode="ID",
-                id_list=mw_IDs["ParticleIDs"],
+                mode="sphere",
             )
             filters.add_galaxy_components(component_dataframe)
 

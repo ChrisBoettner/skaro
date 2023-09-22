@@ -283,7 +283,7 @@ class HaloContainer:
         snapshot: int | str,
         resolution: int,
         sim_id: str = "09_18",
-        remove_subhalos: bool = True,
+        remove_subhalos: bool = False,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """
@@ -301,7 +301,7 @@ class HaloContainer:
             ID of the concrete simulation run. The default is "09_18".
         remove_subhalos: bool, optional
             Remove particles associated with substructures by filtering all IDs that
-            occur more than once.
+            occur more than once. The default is False.
         **kwargs : Any
             Further arguments passed to load_AHF_particles.
 
@@ -483,7 +483,7 @@ class Halo(HaloContainer):
         halo_ID: Optional[int] = None,
         id_path: Optional[str] = None,
         save: bool = True,
-        remove_subhalos: bool = True,
+        remove_subhalos: bool = False,
     ) -> pd.DataFrame:
         """
         Return dataframe with all particle IDs associated with this halo (based on
@@ -501,7 +501,7 @@ class Halo(HaloContainer):
             Decide if ID file should be saved, if it was just created.
         remove_subhalos: bool, optional
             Remove particles associated with substructures by filtering all IDs that
-            occur more than once.
+            occur more than once. The default is False.
 
         Raises
         ------

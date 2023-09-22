@@ -107,7 +107,7 @@ def calculate_galaxy_decomposition(
         The default is None, which uses the .centre() method of halo.
     radius : Optional[unyt_quantity], optional
         Unyt array describing the radius of the sphere around galaxy which is cut out.
-        The default is None, which uses 0.1 * virial_radius of the halo as determined by
+        The default is None, which uses 0.2 * virial_radius of the halo as determined by
         the .virial_radius() method of halo.
     id_list : Optional[list], optional
         The ID list to filter by. The default is None, which uses the ID list of the
@@ -160,7 +160,7 @@ def calculate_galaxy_decomposition(
             if radius is None:
                 if not isinstance(halo, Halo):
                     raise TypeError("halo is no Halo obj.")
-                radius = 0.1 * halo.virial_radius()
+                radius = 0.2 * halo.virial_radius()
 
             centre_value = centre.to("code_length").value
             radius_value = radius.to("code_length").value
@@ -307,7 +307,7 @@ def galaxy_components(
                 "WARNING: Decomposition file not found. Trying with "
                 "force_calculation=True."
             )
-            galaxy_components(
+            assignment = galaxy_components(
                 halo=halo,
                 snapshot_path=snapshot_path,
                 decomposition_path=decomposition_path,

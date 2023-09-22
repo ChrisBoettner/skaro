@@ -4,6 +4,7 @@
 # Data Files
 *.hdf5
 *.ewah
+*.csv
 
 # exclude data from source control by default
 /data/raw
