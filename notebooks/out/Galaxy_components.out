@@ -1,0 +1,39 @@
+
+      DETECTED LOCAL MACHINE: Test snapshot loaded.
+
+yt : [INFO     ] 2023-09-26 13:53:03,836 Calculating time from 1.000e+00 to be 4.318e+17 seconds
+yt : [INFO     ] 2023-09-26 13:53:03,897 Parameters: current_time              = 4.318436660023809e+17 s
+yt : [INFO     ] 2023-09-26 13:53:03,897 Parameters: domain_dimensions         = [1 1 1]
+yt : [INFO     ] 2023-09-26 13:53:03,898 Parameters: domain_left_edge          = [0. 0. 0.]
+yt : [INFO     ] 2023-09-26 13:53:03,898 Parameters: domain_right_edge         = [100. 100. 100.]
+yt : [INFO     ] 2023-09-26 13:53:03,898 Parameters: cosmological_simulation   = 1
+yt : [INFO     ] 2023-09-26 13:53:03,898 Parameters: current_redshift          = 4.440892098500626e-16
+yt : [INFO     ] 2023-09-26 13:53:03,898 Parameters: omega_lambda              = 0.682
+yt : [INFO     ] 2023-09-26 13:53:03,898 Parameters: omega_matter              = 0.318
+yt : [INFO     ] 2023-09-26 13:53:03,898 Parameters: omega_radiation           = 0.0
+yt : [INFO     ] 2023-09-26 13:53:03,898 Parameters: hubble_constant           = 0.6777
+
+      TIMER: Block 'Loading Hestia Snapshot...' took 0.13 seconds.
+
+
+      TIMER: Block 'Loading Particle IDs...' took 0.36 seconds.
+
+
+      STARS: 'stars' field derives from PartType4 field in age range: [0.02, inf] Gyr.
+
+
+      FIELDS: Adding field ('PartType4', 'stellar_age') field with ages in Gyr.
+
+yt : [INFO     ] 2023-09-26 13:53:07,563 Allocating for 1.92e+08 particles
+Installed qt5 event loop hook.
+Shell is already running a gui event loop for qt5. Call with no arguments to disable the current loop.
+Loading particle index:   0%|          | 0/245 [00:00<?, ?it/s]Loading particle index:  36%|███▌      | 88/245 [00:00<00:00, 833.67it/s]Loading particle index: 100%|██████████| 245/245 [00:00<00:00, 1434.94it/s]
+
+      FIELDS: Adding field ('PartType4', 'InitialMass'), with masses in  'code_mass'.
+
+
+      WARNING: Decomposition file not found. Trying with force_calculation=True.
+
+
+      DECOMPOSITION: Calculating decomposition.
+
