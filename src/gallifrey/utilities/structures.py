@@ -5,6 +5,7 @@ Created on Thu Jun 15 14:02:09 2023
 
 @author: chris
 """
+from collections import Counter
 from functools import lru_cache
 from typing import Any
 
@@ -28,6 +29,25 @@ def flatten_list(nested_list: list[list]) -> list[Any]:
 
     """
     return [item for sublist in nested_list for item in sublist]
+
+
+@lru_cache(maxsize=8)
+def count_list_occurences(input_list: list[Any]) -> Counter:
+    """
+    Create Counter object that counts how often elements occur in list.
+
+    Parameters
+    ----------
+    input_list : list[Any]
+        The input list.
+
+    Returns
+    -------
+    Counter
+        Counter object. Call on list items to check how often item has occured in list.
+
+    """
+    return Counter(input_list)
 
 
 def find_closest(

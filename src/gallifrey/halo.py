@@ -7,7 +7,6 @@ Created on Tue Feb 14 11:37:46 2023
 """
 
 import pathlib
-from collections import Counter
 from typing import Any, Optional
 
 import numpy as np
@@ -25,6 +24,7 @@ from gallifrey.data.load import load_AHF_particles
 from gallifrey.data.paths import Path
 from gallifrey.filter import Filter
 from gallifrey.utilities.math import calculate_pca
+from gallifrey.utilities.structures import count_list_occurences
 
 
 class HaloContainer:
@@ -341,9 +341,9 @@ class HaloContainer:
 
         # filter out particles that occur more than once
         if remove_subhalos:
-            num_occurences = Counter(ahf_particles)
+            occurence_counter = count_list_occurences(ahf_particles)
             halo_particles = [
-                item for item in halo_particles if num_occurences[item] == 1
+                item for item in halo_particles if occurence_counter[item] == 1
             ]
 
         # convert and save in DataFrame format

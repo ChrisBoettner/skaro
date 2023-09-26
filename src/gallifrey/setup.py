@@ -102,11 +102,19 @@ def data_setup(
         test_flag = False
 
     with Timer("Loading Hestia Snapshot..."):
-        ds, snapshot_path = load_snapshot(snapshot, resolution, test_flag=test_flag)
+        ds, snapshot_path = load_snapshot(
+            snapshot,
+            resolution,
+            sim_id=sim_id,
+            test_flag=test_flag,
+        )
         mw = MainHalo("MW", resolution, ds, sim_id=sim_id, test_flag=test_flag)
 
         filters = Filter(ds)
         fields = Fields(ds)
+
+    with Timer("Loading Particle IDs..."):
+        mw_ids = mw.particle_IDs()
 
     # %%
     with Timer("Adding Stars..."):
@@ -153,7 +161,8 @@ def data_setup(
             component_dataframe = galaxy_components(
                 halo=mw,
                 snapshot_path=snapshot_path + f"/snapshot_{snapshot}",
-                mode="sphere",
+                mode="ID",
+                id_list=mw_ids,
             )
             filters.add_galaxy_components(component_dataframe)
 
