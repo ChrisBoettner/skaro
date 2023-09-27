@@ -26,13 +26,16 @@ script_name="${base_name}.py"
 echo "import sys" > "/tmp/${script_name}"
 if [ "$#" -ge 2 ]; then
     sed -i 's/^\(resolution\s*=\)/# \1/' "${script_name}" # Comment out the original assignments in the generated Python script
-    echo "resolution = sys.argv[1]" >> "/tmp/${script_name}"
+    echo "resolution = int(sys.argv[1])" >> "/tmp/${script_name}"
 fi
 if [ "$#" -ge 3 ]; then
     sed -i 's/^\(sim_id\s*=\)/# \1/' "${script_name}" # Comment out the original assignments in the generated Python script
     echo "sim_id = sys.argv[2]" >> "/tmp/${script_name}"
 fi
 cat "${script_name}" >> "/tmp/${script_name}"
+# Add completion remark at the end of the script
+echo "" >> "/tmp/${script_name}"
+echo "print('DONE!')" >> "/tmp/${script_name}"
 
 # Create the out directory if it doesn't exist
 mkdir -p out

@@ -12,6 +12,9 @@
 # exclude figures
 /figures
 
+# exclude out files
+/notebooks/out
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

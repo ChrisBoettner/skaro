@@ -9,6 +9,7 @@ Created on Tue Feb 14 11:37:46 2023
 import pathlib
 from typing import Any, Optional
 
+import methodtools
 import numpy as np
 import pandas as pd
 from ruamel.yaml import YAML
@@ -478,6 +479,7 @@ class Halo(HaloContainer):
         else:
             raise AttributeError("Path must be str with absolute path to file.")
 
+    @methodtools.lru_cache(maxsize=1)
     def particle_IDs(
         self,
         halo_ID: Optional[int] = None,
