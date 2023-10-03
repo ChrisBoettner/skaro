@@ -248,16 +248,23 @@ def morph(
 
     # if the potential comes from a cosmological simulations, consider an offset with
     # the potential recalculated in isolation
+    # NOTE: CHANGED BY ME, SHOULD WORK BUT NO PROMISES
     if mode == "cosmo_sim":
         offset = disc_prof._profiles["pot"] - disc_prof["phi"]
-        roff = (disc_prof["rbins"][-1] - disc_prof["rbins"][0]) * 0.2
-        proff = disc_prof["rbins"] - roff
-        boff = int(np.argwhere(np.abs(proff) == np.min(np.abs(proff))))
-        moff = np.nan
-        while np.isnan(moff):
-            moff = np.nanmean(offset[boff - 1 : boff + 1])
-            boff += 1
-        disc_prof._profiles["pot"] -= moff
+        # roff = (disc_prof["rbins"][-1] - disc_prof["rbins"][0]) * 0.2
+        # proff = disc_prof["rbins"] - roff
+        # boff = int(np.argwhere(np.abs(proff) == np.min(np.abs(proff))))
+        # moff = np.nan
+        # while np.isnan(moff):
+        #    moff = np.nanmean(offset[boff - 1 : boff + 1])
+        #    boff += 1
+        moff = np.nanmedian(offset)
+        if np.isfinite(moff):
+            disc_prof._profiles["pot"] -= moff
+        else:
+            raise ValueError(
+                "Couldn't calculate Potential offset. Maybe try with mode=='iso_sim'."
+            )
 
     # Offset the midplane potential as for the te array
     disc_prof["pot"] -= te_max
