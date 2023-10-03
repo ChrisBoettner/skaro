@@ -37,6 +37,7 @@ def data_setup(
     planet_hosting_imf_delta: float = 0.05,
     planet_params: Optional[dict[str, Any]] = None,
     calculate_components: bool = True,
+    force_decomposition_calculation: bool = False,
 ) -> tuple[ArepoHDF5Dataset, MainHalo, StellarModel, ChabrierIMF, PlanetModel, str]:
     """
     Load Hestia simulation snapshot, create Milky way halo object and
@@ -75,6 +76,9 @@ def data_setup(
     calculate_components: bool, optional
         If True, calculates galaxy components and adds correspoding fields. The default
         is True.
+    force_decomposition_calculation: bool, optional
+        If True, galaxy components are recalculated and not loaded from external file,
+        even if that's possible. The default is False.
 
     Returns
     -------
@@ -163,6 +167,7 @@ def data_setup(
                 snapshot_path=snapshot_path + f"/snapshot_{snapshot}",
                 mode="ID",
                 id_list=mw_ids,
+                force_calculation=force_decomposition_calculation,
             )
             filters.add_galaxy_components(component_dataframe)
 
