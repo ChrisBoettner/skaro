@@ -14,7 +14,7 @@ debug = False
 ########################################################################################
 
 
-def FindMin(q: Any, m_E: Any, M_E: Any, nbins: Any) -> Any:
+def FindMin(q: Any, m_E: Any, M_E: Any, bins: Any) -> Any:
     """
     It looks for the minima in the distribution of energies q in the interval
     [m_E; M_E] with nbin bins
@@ -23,7 +23,7 @@ def FindMin(q: Any, m_E: Any, M_E: Any, nbins: Any) -> Any:
     q -- N array with energy of particles
     m_E -- lower bound of the interval where to look for the minima
     M_E -- upper bound of the interval where to look for the minima
-    nbins -- number of bins in the interval used to bin the distribution q
+    bins -- bins in the interval used to bin the distribution q
 
     Returns:
     array with the position of the minima of the distribution q, along with their
@@ -34,7 +34,7 @@ def FindMin(q: Any, m_E: Any, M_E: Any, nbins: Any) -> Any:
     MinPart: Any = max(1000, 0.01 * len(q))
     arr = q[(q >= m_E) * (q <= M_E)]
     # Build the histogram
-    hist = np.histogram(arr, bins=np.linspace(m_E, M_E, nbins))
+    hist = np.histogram(arr, bins=bins)
 
     # Evaluate the increment on both sides
     diff = hist[0][1:] - hist[0][:-1]
@@ -181,7 +181,7 @@ def morph(
     m_bin = 80  # Minimum number of bins
     M_bin = 400  # Maximum number of bins
     shrink = 2  # Refinement factor to find Ecut (see RefineMin)
-    StartNbins = 25  # Starting bin number
+    # StartNbins = 25  # Starting bin number
     toll = 1.5  # Bin range: increase it to find more minima. With higher values,
     # it may not converge
     Emin = (
@@ -374,24 +374,27 @@ def morph(
     if Ecut is None:
         # Fix the number of bin as a function of Npart
         NbinMax = max(min(int(0.5 * np.sqrt(len(te))), M_bin), m_bin)
-        nbins = StartNbins
 
         if debug:
             print("First round - q90")
 
         # This is to exclude the outer tail of bound particles
-        M_E = np.quantile(te, 0.9)
-        m_E = np.min(te)
-        Ecut, E_val = FindMin(te, m_E, M_E, nbins)
+        M_E: float = np.quantile(te, 0.9)
+        m_E: float = np.min(te)
+
+        bins = np.histogram_bin_edges(te, bins="fd", range=(m_E, M_E))
+        Ecut, E_val = FindMin(te, m_E, M_E, bins)
         # If no minimum is found or the only minimum is too close to -1 (Maybe a GC?)
         if len(Ecut) == 0 or (len(Ecut) == 1 and Ecut < Emin):
             if debug:
                 print("RE-evaluation ")
 
             M_E = np.max(te)
-            Ecut, E_val = FindMin(te, m_E, M_E, nbins)
+            bins = np.histogram_bin_edges(te, bins="fd", range=(m_E, M_E))
+            Ecut, E_val = FindMin(te, m_E, M_E, bins)
             Ecut = Ecut
 
+        nbins = len(bins) - 1
         # If one or none minima are found
         if len(Ecut) <= 1:
             D = (M_E - m_E) / float(nbins)
@@ -410,7 +413,8 @@ def morph(
         while nbins < NbinMax:
             nbins = shrink * nbins
             D = D / shrink
-            pos_E_refined, val_refined = FindMin(te, m_E, M_E, nbins)
+            bins = np.histogram_bin_edges(te, bins=nbins, range=(m_E, M_E))
+            pos_E_refined, val_refined = FindMin(te, m_E, M_E, bins)
             EcutTEMP = []
             E_valTEMP = []
             for i, v in enumerate(E_val):
