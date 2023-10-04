@@ -17,7 +17,7 @@ debug = False
 def FindMin(q: Any, m_E: Any, M_E: Any, bins: Any) -> Any:
     """
     It looks for the minima in the distribution of energies q in the interval
-    [m_E; M_E] with nbin bins
+    [m_E; M_E]
 
     Arguments:
     q -- N array with energy of particles

@@ -213,7 +213,7 @@ def _create_component_mask(
     """
     Creates mask on star_particle_IDs categorising if they belong to a given
     galaxy component.
-    By default, pseudo-bulge and bulge are both classified as bulge.
+    By default, pseudo-bulge and thick disk are both classified as thick disk.
 
     Parameters
     ----------
@@ -240,8 +240,8 @@ def _create_component_mask(
         component_dict = {
             "unbound": [0],
             "thin_disk": [1],
-            "thick_disk": [2],
-            "bulge": [3, 4],
+            "thick_disk": [2, 3],
+            "bulge": [4],
             "halo": [5],
             "all": [0, 1, 2, 3, 4, 5],
         }
