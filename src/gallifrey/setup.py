@@ -101,6 +101,7 @@ def data_setup(
         logger.info("DETECTED LOCAL MACHINE: Test snapshot loaded.")
         resolution = 4096
         snapshot = 127
+        sim_id = "09_18"
         test_flag = True  # load test snapshot on local machine
     else:
         test_flag = False
