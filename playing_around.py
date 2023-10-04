@@ -32,5 +32,5 @@ ds, mw, stellar_model, imf, planet_model, path = data_setup(
     ngpps_num_embryos=num_embryos,
     ngpps_star_masses=host_star_mass,
     calculate_components=True,
-    force_decomposition_calculation=True,
+    force_decomposition_calculation=False,
 )

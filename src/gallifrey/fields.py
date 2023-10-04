@@ -569,6 +569,10 @@ class Fields:
         if len(formation_redshift) == 0:
             return data.ds.arr(np.array([]), "Gyr")
 
+        # fudging away numerical issues with formation time calculation,
+        # this should only affect a small number particles
+        formation_redshift[formation_redshift < 0] = 10
+
         # make redshift space and calculate corresponding cosmic time
         max_redshift = np.amax(formation_redshift)
         redshift_grid = np.linspace(

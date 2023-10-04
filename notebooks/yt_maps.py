@@ -27,7 +27,7 @@ def plot_component_maps(
     weight_field: Optional[tuple[str, str]] = None,
     colorbar_percentiles: tuple[float, float] = (1, 99),
     width: tuple[float, str] = (43.3, "kpc"),
-    depth: tuple[float, str] = (5, "kpc"),
+    depth: tuple[float, str] = (1, "kpc"),
     cmap: Optional[str] = None,
     figsize: tuple[float, float] = (12.6, 12.6),
     deposition_method: str = "cic",
@@ -58,7 +58,7 @@ def plot_component_maps(
     width : tuple[float, str], optional
         Plot limits for map. The default is (43.3, "kpc").
     depth : tuple[float, str], optional
-        Depth of the projected, centered on domain center. The default is (4, "kpc").
+        Depth of the projected, centered on domain center. The default is (1, "kpc").
     cmap : str, optional
         Colormap to use. The default is "None", which loads the color palette defined
         in gallifrey.visualization.seaborn.
