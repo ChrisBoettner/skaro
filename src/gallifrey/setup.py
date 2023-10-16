@@ -118,10 +118,6 @@ def data_setup(
         filters = Filter(ds)
         fields = Fields(ds)
 
-    with Timer("Loading Particle IDs..."):
-        mw_ids = mw.particle_IDs()
-
-    # %%
     with Timer("Adding Stars..."):
         stellar_model = StellarModel()
         imf = ChabrierIMF()
@@ -162,17 +158,6 @@ def data_setup(
         fields.add_height(normal_vector)
         fields.add_planar_radius(normal_vector)
 
-        if calculate_components:
-            component_dataframe = galaxy_components(
-                halo=mw,
-                snapshot_path=snapshot_path + f"/snapshot_{snapshot}",
-                mode="ID",
-                id_list=mw_ids,
-                force_calculation=force_decomposition_calculation,
-            )
-            filters.add_galaxy_components(component_dataframe)
-
-    # %%
     with Timer("Adding Planets..."):
         if planet_params is None:
             planet_params = {}
@@ -188,5 +173,19 @@ def data_setup(
                 planet_hosting_imf_bounds,
                 **planet_params,
             )
+
+    with Timer("Loading Particle IDs..."):
+        mw_ids = mw.particle_IDs()
+
+    if calculate_components:
+        with Timer("Galaxy Decomposition..."):
+            component_dataframe = galaxy_components(
+                halo=mw,
+                snapshot_path=snapshot_path + f"/snapshot_{snapshot}",
+                mode="ID",
+                id_list=mw_ids,
+                force_calculation=force_decomposition_calculation,
+            )
+            filters.add_galaxy_components(component_dataframe)
 
     return ds, mw, stellar_model, imf, planet_model, snapshot_path

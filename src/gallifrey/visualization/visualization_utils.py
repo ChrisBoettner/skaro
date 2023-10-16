@@ -125,6 +125,34 @@ def get_palette(
         return diverging_palette
 
 
+def adjust_legend(ax: Axes, ncols: int = 3, pad: float = 1) -> Axes:
+    """
+    Adjust plot to accomodate for legend. Can increase the number of columns for the
+    legend, and add extra space at top of legend for legend.
+
+    Parameters
+    ----------
+    ax : Axes
+        The matplotlib Axes object.
+    ncols : int, optional
+        Number of columns for the legend. The default is 3.
+    pad : float, optional
+        Additional padding at top of plot (multiple of ymax). The default is 1,
+        i.e. no change.
+
+    Returns
+    -------
+    Axes
+        Matplotlib Axes object with adjusted for the legend.
+
+    """
+
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(ymin, ymax * pad)
+    ax.legend(ncols=3)
+    return ax
+
+
 class FigureProcessor:
     """
     Class to handle figures created by seaborn

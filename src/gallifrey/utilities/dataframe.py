@@ -85,7 +85,6 @@ def aggregated_dataframe(
             ]
 
         dataframe[field_value] = flatten_list(data)
-
     return dataframe
 
 
@@ -102,8 +101,8 @@ def rename_labels(
         The dataframe whose columns are renamed.
     mapping_dict : Optional[dict], optional
         The mapping dictonary containing old column names as keys and new values as
-        labels. The default is None, in which case a dictonary for the parameter names
-        is used.
+        labels. The default is None, in which case a default dictonary for the parameter
+        names is used.
 
     Returns
     -------
@@ -135,3 +134,44 @@ def rename_labels(
         key: value for key, value in mapping_dict.items() if value in dataframe.columns
     }
     return dataframe, label_dict
+
+
+def rename_galaxy_components(
+    dataframe: pd.DataFrame,
+    key: str = "Component",
+    mapping_dict: Optional[dict[str, str]] = None,
+) -> pd.DataFrame:
+    """
+    Rename galaxy component names of a dataframe based on a mapping dictionary
+    and return dataframe with changed names. Convenience function to translate between
+    yt field names to names that are nicer for plotting.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        The dataframe whose entries are renamed.
+    key : str, optional
+        The name of the column that contains the galaxy component names. The default is
+        "Component".
+    mapping_dict : dict[str,str], optional
+        The dictonary that translates between yt field names and new names. The default
+        is None, in which case a default dictonary for the parameter
+        names is used.
+
+
+    Returns
+    -------
+    dataframe : pd.DataFrame
+        The dataframe with renamed galaxy component entries.
+
+    """
+    if mapping_dict is None:
+        mapping_dict = {
+            "bulge_stars": "Bulge",
+            "thin_disk_stars": "Thin Disk",
+            "thick_disk_stars": "Thick Disk",
+            "halo_stars": "Halo",
+        }
+
+    dataframe[key] = dataframe[key].apply(lambda entry: mapping_dict[entry])
+    return dataframe

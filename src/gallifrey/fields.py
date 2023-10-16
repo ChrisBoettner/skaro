@@ -423,9 +423,9 @@ class Fields:
 
     def add_angular_momentum_alignment(self, normal_vector: np.ndarray) -> None:
         """
-        Add circularity of star particles, defined by ratio between angular momentum
-        component normal to galactic plane divided by magnitude of total angular
-        momentum.
+        Add alignment of angular momentum of star particles, defined by ratio between
+        angular momentum component normal to galactic plane divided by magnitude of
+        total angular momentum.
 
         Parameters
         ----------
