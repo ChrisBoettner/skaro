@@ -38,9 +38,10 @@ class Model:
         resolution: int = 4096,
         sim_id: str = "09_18",
         halo_name: str = "MW",
+        star_age_bounds: tuple[float, float] = (0.02, np.inf),
         ngpps_num_embryos: int = 50,
         ngpps_star_masses: float | tuple[float, ...] = 1,
-        star_age_bounds: tuple[float, float] = (0.02, np.inf),
+        ngpps_hard_bounds: str = "none",
         planet_hosting_imf_delta: float = 0.05,
         planet_params: Optional[dict[str, Any]] = None,
         calculate_components: bool = True,
@@ -61,6 +62,9 @@ class Model:
             ID of the specific Hestia run. The default is "09_18".
         halo_name: str, optional
             The name of the main Halo. The default is "MW".
+        star_age_bounds : tuple[float, float], optional
+            The age range for star particles to be considered in the add_stars
+            command. The default is (0.02, np.inf).
         ngpps_num_embryos : tuple[int, float], optional
             Parameter describing the NGPPS population run, number of embryos used for
             the run. The default is 50.
@@ -69,9 +73,14 @@ class Model:
             scalar (in which case the imf_delta is invoked for the IMF integration) or
             a tuple. The values must be in the NGPPS runs (0.1, 0.3, 0.5, 0.7, 1).
             Masses < 1 only available in ngpps_num_embryos = 50. The default is 1.
-        star_age_bounds : tuple[float, float], optional
-            The age range for star particles to be considered in the add_stars
-            command. The default is (0.02, np.inf).
+        ngpps_hard_bounds: str, optional
+            Star particles with parameter outside of reference range will be assigned
+            zero planets, if bounds are "lower", "upper" or "both". No bounds condition
+            can be set using "none". This is especially relevant for the metallicity
+            considerations, where star particles with metallicities below the miminimum
+            value of the NGPPS sample ([Fe/H] = -0.6) are assigned zero planets. The
+            default is "none". For more details, see
+            gallifrey.utilities.dataframe.within_bounds.
         planet_hosting_imf_delta : float, optional
             If ngpps_star_masses is a single number, the IMF is integrated in the range
             ((1-imf_delta_mass)*ngpps_star_mass, (1+imf_delta)*ngpps_star_masses). No
@@ -96,9 +105,10 @@ class Model:
             "resolution",
             "sim_id",
             "halo_name",
+            "star_age_bounds",
             "ngpps_num_embryos",
             "ngpps_star_masses",
-            "star_age_bounds",
+            "ngpps_hard_bounds",
             "planet_hosting_imf_delta",
             "planet_params",
         ]
@@ -108,9 +118,10 @@ class Model:
         self.resolution = resolution
         self.sim_id = sim_id
         self.halo_name = halo_name
+        self.star_age_bounds = star_age_bounds
         self.ngpps_num_embryos = ngpps_num_embryos
         self.ngpps_star_masses = ngpps_star_masses
-        self.star_age_bounds = star_age_bounds
+        self.ngpps_hard_bounds = ngpps_hard_bounds
         self.planet_hosting_imf_delta = planet_hosting_imf_delta
         if planet_params is None:
             planet_params = {}
@@ -152,12 +163,13 @@ class Model:
             Value of attribute.
 
         """
-        if name == "config_list":
+        if (not hasattr(self, "config_list")) and name == "config_list":
             # pass to add config_list to attributes
             pass
         elif (name in self.config_list) and hasattr(self, name):
             # print change if config value is changed (after it has already been set)
-            logger.info(f"CONFIG: Setting {name} to {value}.")
+            if not getattr(self, name) == value:
+                logger.info(f"CONFIG: Setting {name} to {value}.")
         super().__setattr__(name, value)
 
     def get_config(self) -> dict[str, Any]:
@@ -342,11 +354,12 @@ class Model:
             for category in planet_model.categories:
                 self.fields.add_planets(
                     category,
-                    self.ngpps_star_masses,
-                    planet_model,
-                    self.stellar_model,
-                    self.imf,
-                    self.planet_hosting_imf_bounds(),
+                    host_star_masses=self.ngpps_star_masses,
+                    planet_model=planet_model,
+                    stellar_model=self.stellar_model,
+                    imf=self.imf,
+                    planet_hosting_imf_bounds=self.planet_hosting_imf_bounds(),
+                    hard_bounds=self.ngpps_hard_bounds,
                     **self.planet_params,
                 )
         return planet_model
@@ -362,6 +375,11 @@ class Model:
 
         """
         for attr_name, new_value in config.items():
+            if attr_name not in self.config_list:
+                logger.warn(
+                    f"WARNING: {attr_name} of config attribute not in " "config_list."
+                )
+
             if new_value is not None:
                 setattr(self, attr_name, new_value)
 
@@ -374,6 +392,7 @@ class Model:
             (
                 "ngpps_num_embryos",
                 "ngpps_star_masses",
+                "ngpps_hard_bounds",
                 "planet_hosting_imf_delta",
             )
         ).isdisjoint(set(config.keys())):

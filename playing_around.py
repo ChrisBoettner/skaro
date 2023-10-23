@@ -18,28 +18,19 @@ import yt
 
 sys.path.append(str(pathlib.Path(os.getcwd()).joinpath("src")))
 
+from gallifrey.model import Model
 from gallifrey.particles import rotated_dataset
-from gallifrey.setup import DataSetup
 
 # %%
 resolution = 8192
 sim_id = "37_11"
 num_embryos = 50
 host_star_mass = 1
-# ds, mw, stellar_model, imf, planet_model, path = data_setup(
-#     resolution=resolution,
-#     sim_id=sim_id,
-#     ngpps_num_embryos=num_embryos,
-#     ngpps_star_masses=host_star_mass,
-#     calculate_components=True,
-#     force_decomposition_calculation=False,
-# )
 
-source = DataSetup(
+model = Model(
     resolution=resolution,
     sim_id=sim_id,
     ngpps_num_embryos=num_embryos,
     ngpps_star_masses=host_star_mass,
-    calculate_components=True,
-    force_decomposition_calculation=False,
+    ngpps_hard_bounds='upper',
 )

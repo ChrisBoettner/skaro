@@ -136,27 +136,28 @@ def rename_labels(
     return dataframe, label_dict
 
 
-def rename_galaxy_components(
+def rename_entries(
     dataframe: pd.DataFrame,
-    key: str = "Component",
+    column: str = "Component",
     mapping_dict: Optional[dict[str, str]] = None,
 ) -> pd.DataFrame:
     """
-    Rename galaxy component names of a dataframe based on a mapping dictionary
+    Rename entries in column of a dataframe based on a mapping dictionary
     and return dataframe with changed names. Convenience function to translate between
-    yt field names to names that are nicer for plotting.
+    yt field names to names that are nicer for plotting. The defaults are set to rename
+    the galaxy components.
 
     Parameters
     ----------
     dataframe : pd.DataFrame
         The dataframe whose entries are renamed.
-    key : str, optional
+    column : str, optional
         The name of the column that contains the galaxy component names. The default is
         "Component".
     mapping_dict : dict[str,str], optional
         The dictonary that translates between yt field names and new names. The default
-        is None, in which case a default dictonary for the parameter
-        names is used.
+        is None, in which case a default dictonary for the galaxy component names is
+        used.
 
 
     Returns
@@ -167,11 +168,93 @@ def rename_galaxy_components(
     """
     if mapping_dict is None:
         mapping_dict = {
+            "stars": "Stars",
             "bulge_stars": "Bulge",
             "thin_disk_stars": "Thin Disk",
             "thick_disk_stars": "Thick Disk",
             "halo_stars": "Halo",
         }
 
-    dataframe[key] = dataframe[key].apply(lambda entry: mapping_dict[entry])
+    dataframe[column] = dataframe[column].apply(lambda entry: mapping_dict[entry])
     return dataframe
+
+
+def within_bounds(
+    dataframe: pd.DataFrame,
+    columns: list[str],
+    bounds: dict[str, tuple[float, float]],
+    condition: str,
+) -> pd.Series:
+    """
+    Check if values in a dataframe fall within some given bounds.
+
+    The bounds condition can be
+        'none':
+            No bound conditions are applied, returns Series of True.
+        'lower':
+            Series contains True if all values in row are above the lower bound,
+            otherwise False.
+        'upper':
+            Series contains True if all values in row are below the upper bound,
+            otherwise False.
+        'both':
+            Series contains True if all values in row are between the bounds,
+            otherwise False.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        The dataframe.
+    columns : list[str]
+        A list of columns that are checked for falling within the bounds.
+    bounds : dict[str, tuple[float, float]]
+        A dictonary of bounds, must have the column names as keys and corresponding
+        bounds as values in form of a tuple (lower_bound, upper_bound).
+    condition : str
+        The condition that the dataframe values are checked against. Must be 'none',
+        'lower', 'upper' or 'both'.
+
+    Returns
+    -------
+    pd.Series
+        A pandas series containing 'True' if all row values fall within bounds and
+        'False' if they do not.
+
+    """
+
+    if not all([column in dataframe.columns for column in columns]):
+        raise ValueError("All values in 'columns' must be columns in the DataFrame")
+
+    if not isinstance(bounds, dict):
+        raise ValueError(
+            "bounds must be a dict, with the columns as keys and "
+            "a tuple (lower_bound, upper_bound) as values."
+        )
+
+    if not all([column in bounds.keys() for column in columns]):
+        raise ValueError(
+            "All values in 'column' must have corresponding bounds in "
+            "the bounds dictionary."
+        )
+
+    if (not isinstance(condition, str)) or (
+        condition.lower() not in ["none", "lower", "upper", "both"]
+    ):
+        raise ValueError(
+            "bounds condition must be 'none', 'lower', 'upper', or 'both'."
+        )
+    condition = condition.lower()  # make case-insensitive
+
+    if condition == "none":
+        return pd.Series([True] * len(dataframe), index=dataframe.index)
+
+    is_within = []
+    for column in columns:
+        if condition == "lower":
+            is_within.append(dataframe[column] > bounds[column][0])
+        elif condition == "upper":
+            is_within.append(dataframe[column] < bounds[column][1])
+        elif condition == "both":
+            is_within.append(dataframe[column].between(*bounds[column]))
+
+    return pd.concat(is_within, axis=1).all(axis=1)

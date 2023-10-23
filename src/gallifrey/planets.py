@@ -16,6 +16,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
 
 from gallifrey.data.paths import Path
+from gallifrey.utilities.dataframe import within_bounds
 from gallifrey.utilities.structures import find_closest, make_meshgrid
 
 
@@ -536,7 +537,11 @@ class PlanetModel:
 
     """
 
-    def __init__(self, num_embryos: int) -> None:
+    def __init__(
+        self,
+        num_embryos: int,
+        category_dict: Optional[dict[str, Callable]] = None,
+    ) -> None:
         """
         Initialize a planet model based on specific population, based on number
         of embryos. Populations with a host star mass < 1 only have 50 embryo run.
@@ -545,6 +550,10 @@ class PlanetModel:
         ----------
         num_embryos : int
             Number of embryos used for population run, must be in [10, 20, 50, 100].
+        category_dict : Optional[dict[str, Callable]]
+            The planet types and conditions for a planet to fall within a type, provided
+            in form of a dict. The default is None, which defaults to the mass-based
+            categories given in Burn2021.
 
         """
         self.num_embryos = num_embryos
@@ -573,15 +582,18 @@ class PlanetModel:
         )
 
         # define planet categories
-        self.category_dict = {
-            "Dwarf": lambda row: row["total_mass"] < 0.5,
-            "Earth": lambda row: 0.5 <= row["total_mass"] < 2,
-            "Super-Earth": lambda row: 2 <= row["total_mass"] < 10,
-            "Neptunian": lambda row: 10 <= row["total_mass"] < 30,
-            "Sub-Giant": lambda row: 30 <= row["total_mass"] < 100,
-            "Giant": lambda row: 100 <= row["total_mass"],
-            "D-Burner": lambda row: 4322 <= row["total_mass"],
-        }
+        if category_dict is None:
+            self.category_dict = {
+                "Dwarf": lambda row: row["total_mass"] < 0.5,
+                "Earth": lambda row: 0.5 <= row["total_mass"] < 2,
+                "Super-Earth": lambda row: 2 <= row["total_mass"] < 10,
+                "Neptunian": lambda row: 10 <= row["total_mass"] < 30,
+                "Sub-Giant": lambda row: 30 <= row["total_mass"] < 100,
+                "Giant": lambda row: 100 <= row["total_mass"],
+                "D-Burner": lambda row: 4322 <= row["total_mass"],
+            }
+        else:
+            self.category_dict = category_dict
         self.categories = list(self.category_dict.keys())
 
     def get_population_id(self, num_embryos: int, host_star_mass: float) -> str:
@@ -795,7 +807,7 @@ class PlanetModel:
         variables: Optional[pd.DataFrame] = None,
         included_variables: Optional[tuple[str, ...]] = None,
         ages: Optional[tuple[int, ...] | int] = None,
-        hard_bounds: bool = False,
+        hard_bounds: str = "none",
         return_full: bool = False,
         num_samples: int = 5000,
         default_age: int = 100000000,
@@ -829,8 +841,10 @@ class PlanetModel:
             None, in that case the relevant ages are inferred from the age column
             of the variables dataframe.
         hard_bounds: bool, optional
-            If True, predictions for variables outside of variable bounds (as given
-            in Systems object) are set to zero.
+            If "both", predictions for variables outside of variable bounds (as given
+            in Systems object) are set to zero. If "lower" or "upper", only values
+            below or above threshold are set to zero, with the other end being
+            extrapolated. No bounds con be set using "none".
         return_full : bool, optional
             If True, return the full DataFrame (variables + prediction). Otherwise,
             return only the category column (i.e. the prediction).
@@ -869,6 +883,7 @@ class PlanetModel:
             )
 
         if variables is not None:
+            variables = variables.copy()  # create copy to not change original df
             # check if ages column exists and set number of samples
             if "age" not in variables.columns:
                 variables["age"] = default_age
@@ -926,16 +941,15 @@ class PlanetModel:
             ages = tuple(np.unique(find_closest(sample["age"], self.available_ages)))
 
         # check for rows where all variables are within bounds
-        within_bounds = [
-            sample[variable].between(*systems.bounds[variable])
-            for variable in included_variables
-        ]
-        all_within_bounds = pd.concat(within_bounds, axis=1).all(axis=1)
+        prediction_dataframe = sample.copy()
+        prediction_dataframe["out_of_bounds_flag"] = ~within_bounds(
+            dataframe=sample,
+            columns=included_variables,
+            bounds=systems.bounds,
+            condition=hard_bounds,
+        )
 
         # Get the KNN model and predict the category
-        prediction_dataframe = sample.copy()
-        prediction_dataframe["out_of_bounds_flag"] = ~all_within_bounds
-
         for category in categories:
             knn, scaler = self.get_planet_function(
                 category=category,

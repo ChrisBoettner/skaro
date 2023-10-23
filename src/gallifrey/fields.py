@@ -94,10 +94,11 @@ class Fields:
         planet_model: PlanetModel,
         stellar_model: StellarModel,
         imf: ChabrierIMF,
-        planet_hosting_number: tuple[float, float],
+        planet_hosting_imf_bounds: tuple[float, float],
         reference_age: int | None = 100000000,
         num_integral_points: int = 50,
         only_mainsequence: bool = True,
+        hard_bounds: str = "none",
     ) -> None:
         """
         Add number of planets of a given category associated with the star particle.
@@ -124,9 +125,9 @@ class Fields:
             bound.
         imf : ChabrierIMF
             Stellar initial mass function of the star particles..
-        planet_hosting_number : tuple[float, float]
-            The range over with to integrate the imf. Corresponds to the mass range
-            of stars considered.
+        planet_hosting_imf_bounds : tuple[float, float], optional
+            The range over with to integrate the imf for planet_hosting_number. The
+            default is None. In that case, planet_hosting_number will not be created.
         reference_age : int | None, optional
             The age at which to evaluate the planet population model. The default is
             int(1e+8), i.e. 100Myr. If the value is None, the age of the star particle
@@ -134,7 +135,19 @@ class Fields:
         num_integral_points : int, optional
             Number of points to evaluate the numerical integral on, in case
             host_star_masses is a list. The default is 50.
-
+        only_mainsequence: bool, optional
+            If True, only integrate IMF up to the mass where the stellar lifetime
+            matches the star particle age, i.e. only include main sequence stars. If
+            False, integrate up to the given upper IMF bound in all cases. The default
+            is True.
+        hard_bounds: bool, optional
+            Star particles with parameter outside of reference range will be assigned
+            zero planets, if bounds are "lower", "upper" or "both". No bounds condition
+            can be set using "none". This is especially relevant for the metallicity
+            considerations, where star particles with metallicities below the miminimum
+            value of the NGPPS sample ([Fe/H] = -0.6) are assigned zero planets. The
+            default is "none". For more details, see
+            gallifrey.utilities.dataframe.within_bounds.
         """
         # check if star properties are correctly set
         self.check_star_properties()
@@ -146,8 +159,8 @@ class Fields:
                 number_of_stars = data["stars", "planet_hosting_number"]
             except KeyError:
                 raise KeyError(
-                    "['stars', 'number'] field does not exist. Create first "
-                    "using add_number_of_stars method."
+                    "['stars', 'planet_hosting_number'] field does not exist. Create "
+                    "first using add_planet_hosting_star_number method."
                 )
 
             particle_masses = data["stars", "InitialMass"].to("Msun").value
@@ -171,7 +184,10 @@ class Fields:
             if isinstance(host_star_masses, (int, float)):
                 # calculate planets per star using KNN interpolation of NGPPS results
                 planets_per_star = planet_model.prediction(
-                    category, host_star_masses, variables_dataframe
+                    category,
+                    host_star_masses,
+                    variables_dataframe,
+                    hard_bounds=hard_bounds,
                 )
                 # calculate total number of planets
                 planets = planets_per_star.to_numpy()[:, 0] * number_of_stars
@@ -185,11 +201,11 @@ class Fields:
                 # due to stars already going off main sequence
                 upper_bound = stellar_model.mass_from_lifetime(stellar_ages)
                 upper_bound[
-                    upper_bound > planet_hosting_number[1]
-                ] = planet_hosting_number[1]
+                    upper_bound > planet_hosting_imf_bounds[1]
+                ] = planet_hosting_imf_bounds[1]
 
                 # create integration space
-                m_space = np.geomspace(*planet_hosting_number, num_integral_points)
+                m_space = np.geomspace(*planet_hosting_imf_bounds, num_integral_points)
 
                 # linear interpolation of number of planets
                 planets_per_star_function = interp1d(
@@ -197,7 +213,10 @@ class Fields:
                     np.array(
                         [
                             planet_model.prediction(
-                                category, mass, variables_dataframe
+                                category,
+                                mass,
+                                variables_dataframe,
+                                hard_bounds=hard_bounds,
                             ).to_numpy()[:, 0]
                             for mass in sorted_masses
                         ]
@@ -206,7 +225,7 @@ class Fields:
                 )
                 planets_per_star = planets_per_star_function(m_space)
 
-                # IMF njmber density contribution, value of the pdf rescaled for the
+                # IMF number density contribution, value of the pdf rescaled for the
                 # mass of the star particle
                 imf_contribution = imf.number_density(particle_masses, m_space)
 
@@ -297,7 +316,7 @@ class Fields:
         self,
         stellar_model: StellarModel,
         imf: ChabrierIMF,
-        planet_hosting_imf_bounds: Optional[tuple[float, float]] = None,
+        planet_hosting_imf_bounds: tuple[float, float],
         only_mainsequence: bool = True,
     ) -> None:
         """
@@ -311,9 +330,8 @@ class Fields:
             bound.
         imf : ChabrierIMF
             Stellar initial mass function of the star particles.
-        planet_hosting_imf_bounds : Optional[tuple[float, float]], optional
-            The range over with to integrate the imf for planet_hosting_number. The
-            default is None. In that case, planet_hosting_number will not be created.
+        planet_hosting_imf_bounds : tuple[float, float], optional
+            The range over with to integrate the imf for planet_hosting_number.
         only_mainsequence: bool, optional
             If True, only integrate IMF up to the mass where the stellar lifetime
             matches the star particle age, i.e. only include main sequence stars. If
@@ -323,34 +341,24 @@ class Fields:
         """
         self.check_star_properties()
 
-        if planet_hosting_imf_bounds is not None:
-
-            def _planet_star_number(
-                field: DerivedField, data: FieldDetector
-            ) -> NDArray:
-                return self._star_number(
-                    field,
-                    data,
-                    imf=imf,
-                    bounds=planet_hosting_imf_bounds,
-                    stellar_model=stellar_model,
-                    only_mainsequence=only_mainsequence,
-                )
-
-            self.ds.add_field(
-                ("stars", "planet_hosting_number"),
-                function=_planet_star_number,
-                sampling_type="local",
-                units="auto",
-                dimensions=1,
-                force_override=True,
+        def _planet_star_number(field: DerivedField, data: FieldDetector) -> NDArray:
+            return self._star_number(
+                field,
+                data,
+                imf=imf,
+                bounds=planet_hosting_imf_bounds,
+                stellar_model=stellar_model,
+                only_mainsequence=only_mainsequence,
             )
-        else:
-            logger.warn(
-                "FIELDS: No planet_hosting_imf_bounds bounds given to "
-                "add_planet_hosting_star_number. planet_hosting_number field not "
-                "created."
-            )
+
+        self.ds.add_field(
+            ("stars", "planet_hosting_number"),
+            function=_planet_star_number,
+            sampling_type="local",
+            units="auto",
+            dimensions=1,
+            force_override=True,
+        )
 
     def add_iron_abundance(self, log_solar_fe_fraction: float = -2.7) -> None:
         """
