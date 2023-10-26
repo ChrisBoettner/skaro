@@ -21,6 +21,7 @@ def aggregated_dataframe(
     type_name: str = "Type",
     base_units: str = "galactic",
     custom_units: Optional[dict[str, str]] = None,
+    drop_type: bool = False,
 ) -> pd.DataFrame:
     """
     Create dataframe with different field values, annotated by particle type from
@@ -43,6 +44,8 @@ def aggregated_dataframe(
         Change units for some specific field_values. Input must be a dictionary with
         the key being the field_value name and the value being the units. The default is
         None.
+    drop_type: bool, optional
+        If True, particle type column is dropped. The default is False.
 
     Returns
     -------
@@ -85,6 +88,9 @@ def aggregated_dataframe(
             ]
 
         dataframe[field_value] = flatten_list(data)
+
+    if drop_type:
+        dataframe = dataframe.drop(columns=[type_name])
     return dataframe
 
 
@@ -127,6 +133,8 @@ def rename_labels(
             "[alpha/Fe]": r"[$\mathrm{\alpha}$/Fe]",
             "stellar_age": "Stellar Age (Gyr)",
             "particle_radius": "Distance (kpc)",
+            "ngpps_star_masses": r"M_\star",
+            "ngpps_num_embryos": r"$N_\mathrm{Embryos}$",
         }
 
     dataframe = dataframe.rename(columns=mapping_dict)

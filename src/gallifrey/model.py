@@ -373,12 +373,16 @@ class Model:
         **config : Any
             The new values to be used in the config for the field creation.
 
+
+        Raises
+        ----------
+        ValueError
+            Raised if config key is not in config_list.
+
         """
         for attr_name, new_value in config.items():
             if attr_name not in self.config_list:
-                logger.warn(
-                    f"WARNING: {attr_name} of config attribute not in " "config_list."
-                )
+                raise ValueError(f"{attr_name} not in config_list.")
 
             if new_value is not None:
                 setattr(self, attr_name, new_value)
