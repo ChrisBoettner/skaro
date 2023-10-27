@@ -7,13 +7,11 @@ Created on Thu Oct 26 18:16:24 2023
 """
 
 import copy
-from typing import Any, Callable, Optional
+from typing import Any, Iterable, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn.algorithms as algo
-import seaborn.utils as utils
 from seaborn.regression import _RegressionPlotter
 
 
@@ -21,174 +19,99 @@ class _LogYRegression(_RegressionPlotter):
     """
     Custom plotter for numeric independent variables with regression model, used for
     logyregplot.
+
     """
 
-    def __init__(self, logy: bool = False, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, logy: bool = True, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.logy = logy
 
-        if any((self.logistic, self.robust, self.lowess, self.logx)):
-            raise ValueError(
-                "logyregplot and _LogYRegression only work with polynomial regression "
-                "and logx=False."
-            )
-
     def fit_regression(
         self,
-        ax: Optional[plt.Axes] = None,
-        x_range: Optional[np.ndarray] = None,
+        ax: plt.Axes = None,
+        x_range: Optional[tuple[float, float]] = None,
         grid: Optional[np.ndarray] = None,
-    ) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+    ) -> tuple[Iterable, np.ndarray, np.ndarray | None]:
         """
-        Fit the regression model.
-
-        For a list of parameters and descriptions, see seaborn regplot documentation.
-
-        """
-        # Create the grid for the regression
-        if grid is None:
-            if self.truncate:
-                x_min, x_max = self.x_range
-            else:
-                if ax is None:
-                    if x_range is None:
-                        raise ValueError("x_range must be (x_min, x_max) not None.")
-                    x_min, x_max = x_range
-                else:
-                    x_min, x_max = ax.get_xlim()
-            grid = np.linspace(x_min, x_max, 100)
-        ci = self.ci
-
-        x = np.log10(self.x) if self.logx else self.x
-        y = np.log10(self.y) if self.logy else self.y
-
-        yhat, yhat_boots = self.fit_poly(x, y, grid, self.order)
-
-        if self.logy:
-            yhat = np.power(10, yhat)
-            if yhat_boots is not None:
-                yhat_boots = np.power(10, yhat_boots)
-
-        # Compute the confidence interval at each grid point
-        if ci is None:
-            err_bands: Optional[np.ndarray] = None
-        else:
-            err_bands = utils.ci(yhat_boots, ci, axis=0)
-
-        return grid, yhat, err_bands
-
-    def fit_poly(
-        self,
-        x: np.ndarray,
-        y: np.ndarray,
-        grid: np.ndarray,
-        order: int,
-    ) -> tuple[np.ndarray, Optional[np.ndarray]]:
-        """
-        Custom polyfit function.
+        Pass regression calculation to super class method after converting y to
+        log10(y), then revert after regression calculation.
 
         Parameters
         ----------
-        x : np.ndarray
-            Independent values.
-        y : np.ndarray
-            Dependent values.
-        grid : np.ndarray
-            Grid to evaluate on fit on for plotting.
-        order : int
-            Order of polynomial.
+        ax : plt.Axes, optional
+            The Axes object containing the plot. The default is None.
+        x_range : Optional[tuple(float, float)], optional
+            The range over which to calculate the regression, must be (lower, upper).
+            The default is None.
+        grid : Optional[np.ndarray], optional
+            The grid points to calculate the fitted regression on. The default is None.
 
         Returns
         -------
-        np.ndarray
-            Fit estimates.
-        np.ndarray
-            Bootstrapped confidence interval estimates.
+        grid : Iterable
+            The grid points to calculate the fitted regression on.
+        yhat : np.ndarray
+            The regression estimator for the y values (fitted in log space).
+        err_bands : np.ndarray
+           The regression estimator for the y error bands (fitted in log space).
 
         """
+        if self.logy:
+            self.y: np.ndarray = np.log10(self.y)
 
-        def reg_func(_x: np.ndarray, _y: np.ndarray) -> np.ndarray:
-            return np.polyval(np.polyfit(_x, _y, order), grid)
-
-        yhat = reg_func(x, y)
-        if self.ci is None:
-            return yhat, None
-
-        yhat_boots = algo.bootstrap(
-            x, y, func=reg_func, n_boot=self.n_boot, units=self.units, seed=self.seed
+        grid, yhat, err_bands = super().fit_regression(
+            ax=ax, x_range=x_range, grid=grid
         )
-        return yhat, yhat_boots
+        if not isinstance(grid, Iterable):
+            raise ValueError("'grid' should be an iterable.")
+
+        if self.logy:
+            self.y = np.power(10, self.y)
+            yhat = np.power(10, yhat)
+            if err_bands is not None:
+                err_bands = np.power(10, err_bands)
+
+        return grid, yhat, err_bands
 
 
 def logyregplot(
-    data: Optional[pd.DataFrame] = None,
-    *,
-    x: Optional[str] = None,
-    y: Optional[str] = None,
-    x_estimator: Optional[Callable] = None,
-    x_bins: Optional[np.ndarray] = None,
-    x_ci: str = "ci",
-    scatter: bool = True,
-    fit_reg: bool = True,
-    ci: int = 95,
-    n_boot: int = 1000,
-    units: Optional[str] = None,
-    seed: Optional[int] = None,
-    order: int = 1,
-    x_partial: Optional[str] = None,
-    y_partial: Optional[str] = None,
-    truncate: bool = True,
-    dropna: bool = True,
-    x_jitter: Optional[float] = None,
-    y_jitter: Optional[float] = None,
-    label: Optional[str] = None,
-    color: Optional[Any] = None,
-    marker: Optional[str] = "o",
-    scatter_kws: Optional[dict] = None,
-    line_kws: Optional[dict] = None,
-    ax: plt.Axes = None
+    data: pd.DataFrame,
+    **kwargs: Any,
 ) -> plt.Axes:
     """
     Extension of seaborn regplot, but fits y values in logspace. Only works with polyfit
-    (of any order). For other regression techiques, use default seaborn regplot.
+    (of any order). For other regression techniques, use default seaborn regplot.
 
-    For a list of parameters and descriptions, see seaborn regplot documentation.
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Tidy (“long-form”) dataframe where each column is a variable and each row is an
+        observation..
+    **kwargs : Any
+        Further parameter passed to _LogYRegression (which inherits from
+        _RegressionPlotter). See seaborn.regplot for more details.
+
+    Returns
+    -------
+    ax : plt.Axes
+        The Axes object containing the plot.
 
     """
     plotter = _LogYRegression(
-        logy=True,
-        x=x,
-        y=y,
         data=data,
-        x_estimator=x_estimator,
-        x_bins=x_bins,
-        x_ci=x_ci,
-        scatter=scatter,
-        fit_reg=fit_reg,
-        ci=ci,
-        n_boot=n_boot,
-        units=units,
-        seed=seed,
-        order=order,
-        logistic=False,
-        lowess=False,
-        robust=False,
-        logx=False,
-        x_partial=x_partial,
-        y_partial=y_partial,
-        truncate=truncate,
-        dropna=dropna,
-        x_jitter=x_jitter,
-        y_jitter=y_jitter,
-        color=color,
-        label=label,
+        **{
+            key: kwargs[key]
+            for key in kwargs.keys()
+            if key not in ["marker", "scatter_kws", "line_kws", "ax"]
+        },
     )
 
-    if ax is None:
-        ax = plt.gca()
+    ax = kwargs.get("ax") or plt.gca()
+    # kwargs.get("ax") returns None if "ax" keys is not present or corresponding value
+    # is None. In any case, if kwargs.get("ax") is None, return plt.gca() instead.
 
-    scatter_kws = {} if scatter_kws is None else copy.copy(scatter_kws)
-    scatter_kws["marker"] = marker
-    line_kws = {} if line_kws is None else copy.copy(line_kws)
+    scatter_kws = copy.copy(kwargs.get("scatter_kws", {}))
+    scatter_kws["marker"] = "o" if "marker" not in kwargs else kwargs["marker"]
+    line_kws = copy.copy(kwargs.get("line_kws", {}))
     plotter.plot(ax, scatter_kws, line_kws)
     return ax
