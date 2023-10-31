@@ -588,8 +588,8 @@ class PlanetModel:
                 "Earth": lambda row: 0.5 <= row["total_mass"] < 2,
                 "Super-Earth": lambda row: 2 <= row["total_mass"] < 10,
                 "Neptunian": lambda row: 10 <= row["total_mass"] < 30,
-                "Sub-Giant": lambda row: 30 <= row["total_mass"] < 100,
-                "Giant": lambda row: 100 <= row["total_mass"],
+                "Sub-Giant": lambda row: 30 <= row["total_mass"] < 300,
+                "Giant": lambda row: 300 <= row["total_mass"],
                 "D-Burner": lambda row: 4322 <= row["total_mass"],
             }
         else:

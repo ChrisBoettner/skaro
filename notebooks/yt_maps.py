@@ -22,7 +22,7 @@ from gallifrey.visualization.visualization_utils import get_palette
 
 def plot_component_maps(
     galaxy_component_data: dict[str, YTDataContainerDataset],
-    field_value: Optional[str] = "total_number",
+    field_value: str = "total_number",
     normal: str = "z",
     weight_field: Optional[tuple[str, str]] = None,
     colorbar_percentiles: tuple[float, float] = (1, 99),
@@ -32,7 +32,7 @@ def plot_component_maps(
     figsize: tuple[float, float] = (12.6, 12.6),
     deposition_method: str = "cic",
     density_unit: str = "1/pc**2",
-    font_dict: dict[str, Any] = {"size": 40},
+    font_dict: Optional[dict[str, Any]] = None,
     hide_colorbar: bool = True,
     hide_axes: bool = False,
     save: bool = False,
@@ -69,8 +69,9 @@ def plot_component_maps(
     density_unit : str, optional
         Unit for spatial density. The default is "1/pc**2". Changing this value will
         lead to an incorrect colorbar, which needs to be adjusted manually.
-    font_dict : dict[str, Any], optional
-        Dictonary of additional font properties. The default is {"size": 16}.
+    font_dict : Optional[dict[str, Any]], optional
+        Dictonary of additional font properties. The default is None, which defaults to
+        a standard font dict.
     save : bool, optional
         If True, save figure to Figures directory. The default is False.
     figure_subdirectory: Optional[str], optional
@@ -85,6 +86,8 @@ def plot_component_maps(
         Lists of ParticleProjectionPlot and Figure objects containing the figures.
 
     """
+    if font_dict is None:
+        font_dict = {"size": 40}
 
     if cmap is None:
         cmap = get_palette(rot=0.6, as_cmap=True, reverse=True)
@@ -127,13 +130,14 @@ def plot_component_maps(
             1,
         )
 
-        cbar_mode = "each"
+        cbar_mode: Optional[str] = "each"
         if hide_colorbar:
             plot.hide_colorbar()
             cbar_mode = None
 
         if hide_axes:
             plot.hide_axes(draw_frame=True)
+            assert hasattr(plot, "annotate_scale")
             plot.annotate_scale(coeff=5, text_args=font_dict)
 
         # export tp matplotlib
@@ -174,7 +178,7 @@ def plot_planet_maps(
     figsize: tuple[float, float] = (18.5, 10.5),
     deposition_method: str = "cic",
     density_unit: str = "1/pc**2",
-    font_dict: dict[str, Any] = {"size": 18},
+    font_dict: Optional[dict[str, Any]] = None,
     subplot_columns: int = 3,
     subplot_pad: float | tuple[float, float] = (0, 0),
     save: bool = False,
@@ -213,8 +217,9 @@ def plot_planet_maps(
     density_unit : str, optional
         Unit for spatial density. The default is "1/pc**2". Changing this value will
         lead to an incorrect colorbar, which needs to be adjusted manually.
-    font_dict : dict[str, Any], optional
-        Dictonary of additional font properties. The default is {"size": 16}.
+    font_dict : Optional[dict[str, Any]], optional
+        Dictonary of additional font properties. The default is None, which defaults to
+        a standard dict.
     subplot_columns : int, optional
         Number of subplot columns. Rows are infered from length of planet_categories
         list. The default is 3.
@@ -234,6 +239,9 @@ def plot_planet_maps(
         ParticleProjectionPlot and Figure object containing the figure.
 
     """
+    if font_dict is None:
+        font_dict = {"size": 18}
+
     if cmap is None:
         cmap = get_palette(rot=0.6, as_cmap=True, reverse=True)
 
@@ -388,7 +396,10 @@ def plot_configurations(
         plot.set_cmap(field, cmap)
         plot.set_unit(field, density_unit)
         if density_unit != "1/pc**2":
-            warnings.warn("density_unit is not default. Need to adjust colorbar label.")
+            warnings.warn(
+                "density_unit is not default. Need to adjust colorbar label.",
+                stacklevel=2,
+            )
 
         if colorbar_normalisation == "row" and ((i + 1) % subplot_columns != 0):
             plot.set_colorbar_label(field, r"")

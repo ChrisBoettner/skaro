@@ -62,6 +62,7 @@ class _LogYRegression(_RegressionPlotter):
         grid, yhat, err_bands = super().fit_regression(
             ax=ax, x_range=x_range, grid=grid
         )
+
         if not isinstance(grid, Iterable):
             raise ValueError("'grid' should be an iterable.")
 
@@ -97,6 +98,8 @@ def logyregplot(
         The Axes object containing the plot.
 
     """
+    kwargs.setdefault("truncate", True) # for consistency with seaborn regplot
+    
     plotter = _LogYRegression(
         data=data,
         **{

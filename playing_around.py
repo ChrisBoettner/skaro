@@ -21,7 +21,6 @@ sys.path.append(str(pathlib.Path(os.getcwd()).joinpath("src")))
 from gallifrey.model import Model
 from gallifrey.particles import rotated_dataset
 
-# %%
 resolution = 8192
 sim_id = "37_11"
 num_embryos = 50
@@ -32,5 +31,5 @@ model = Model(
     sim_id=sim_id,
     ngpps_num_embryos=num_embryos,
     ngpps_star_masses=host_star_mass,
-    ngpps_hard_bounds='upper',
+    ngpps_hard_bounds="upper",
 )
