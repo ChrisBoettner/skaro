@@ -98,8 +98,8 @@ def logyregplot(
         The Axes object containing the plot.
 
     """
-    kwargs.setdefault("truncate", True) # for consistency with seaborn regplot
-    
+    kwargs.setdefault("truncate", True)  # for consistency with seaborn regplot
+
     plotter = _LogYRegression(
         data=data,
         **{
