@@ -2,10 +2,10 @@ from typing import Any
 
 import numpy as np
 import scipy.interpolate as interp
-from scipy.ndimage import gaussian_filter1d
-from scipy.signal import find_peaks
 from pynbody import filt
 from pynbody.analysis import profile
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import find_peaks
 
 from gallifrey.decomposition import gravity
 from gallifrey.decomposition.kdtree import ConstructKDTree

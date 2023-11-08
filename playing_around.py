@@ -16,8 +16,6 @@ import pandas as pd
 import seaborn as sns
 import yt
 
-sys.path.append(str(pathlib.Path(os.getcwd()).joinpath("src")))
-
 from gallifrey.model import Model
 
 resolution = 8192
