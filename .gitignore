@@ -9,9 +9,6 @@
 # exclude data from source control by default
 /data/raw
 
-# exclude figures
-/figures
-
 # exclude out files
 /notebooks/out
 
