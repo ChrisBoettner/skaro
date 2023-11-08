@@ -34,7 +34,8 @@ def plot_component_maps(
     density_unit: str = "1/pc**2",
     font_dict: Optional[dict[str, Any]] = None,
     hide_colorbar: bool = True,
-    hide_axes: bool = False,
+    hide_axes: bool = True,
+    annotate_scale: bool = True,
     save: bool = False,
     figure_subdirectory: Optional[str] = None,
     figure_name_addon: Optional[str] = None,
@@ -72,6 +73,12 @@ def plot_component_maps(
     font_dict : Optional[dict[str, Any]], optional
         Dictonary of additional font properties. The default is None, which defaults to
         a standard font dict.
+    hide_colorbar: bool, optional
+        Hide color bar. The default is True.
+    hide_axes: bool, optional
+        Hide axes. The default is True
+    annotate_scale: bool, optional,
+        Annotate scale. The default is True.
     save : bool, optional
         If True, save figure to Figures directory. The default is False.
     figure_subdirectory: Optional[str], optional
@@ -137,6 +144,7 @@ def plot_component_maps(
 
         if hide_axes:
             plot.hide_axes(draw_frame=True)
+        if annotate_scale:
             assert hasattr(plot, "annotate_scale")
             plot.annotate_scale(coeff=5, text_args=font_dict)
 
@@ -355,7 +363,7 @@ def planet_figure_name_formatting(
             return f"masses={min_mass}-{max_mass}"
         case _:
             raise ValueError(
-                "host_star_masses must either be a number of a list of " "numbers."
+                "host_star_masses must either be a number of a list of numbers."
             )
 
 
