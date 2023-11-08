@@ -27,7 +27,7 @@ def plot_component_maps(
     weight_field: Optional[tuple[str, str]] = None,
     colorbar_percentiles: tuple[float, float] = (1, 99),
     width: tuple[float, str] = (43.3, "kpc"),
-    depth: tuple[float, str] = (1, "kpc"),
+    depth: tuple[float, str] = (2, "kpc"),
     cmap: Optional[str] = None,
     figsize: tuple[float, float] = (12.6, 12.6),
     deposition_method: str = "cic",
