@@ -2,6 +2,8 @@ from typing import Any
 
 import numpy as np
 import scipy.interpolate as interp
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import find_peaks
 from pynbody import filt
 from pynbody.analysis import profile
 
@@ -14,7 +16,7 @@ debug = False
 ########################################################################################
 
 
-def FindMin(q: Any, m_E: Any, M_E: Any, bins: Any) -> Any:
+def FindMin(q: Any, m_E: Any, M_E: Any, bins: Any, sigma: Any) -> Any:
     """
     It looks for the minima in the distribution of energies q in the interval
     [m_E; M_E]
@@ -24,6 +26,8 @@ def FindMin(q: Any, m_E: Any, M_E: Any, bins: Any) -> Any:
     m_E -- lower bound of the interval where to look for the minima
     M_E -- upper bound of the interval where to look for the minima
     bins -- bins in the interval used to bin the distribution q
+    sigma -- standard deviation of smoothing kernel, higher values lead to more
+    smoothing.
 
     Returns:
     array with the position of the minima of the distribution q, along with their
@@ -35,36 +39,41 @@ def FindMin(q: Any, m_E: Any, M_E: Any, bins: Any) -> Any:
     arr = q[(q >= m_E) * (q <= M_E)]
     # Build the histogram
     hist = np.histogram(arr, bins=bins)
+    smoothed_hist = gaussian_filter1d(hist[0], sigma)
 
-    # Evaluate the increment on both sides
-    diff = hist[0][1:] - hist[0][:-1]
-    left = diff[:-1]
-    right = diff[1:]
     # Find the minima
-    id_E: Any = np.where(((left < 0) * (right >= 0)) + ((left <= 0) * (right > 0)))
+    id_E: Any = find_peaks(-smoothed_hist)[0]
+    energies = {id: ((bins[1:] + bins[:-1]) / 2)[id] for id in id_E}
 
-    R_part: Any = np.array([np.sum(hist[0][i + 1 :]) for i in id_E[0]])
-    id_E = id_E[0][R_part > MinPart]
-    id_E_flag = [True] * len(id_E)
-    for i, ids in enumerate(id_E):
-        if len(hist[0]) > ids + 3:
-            id_E_flag[i] *= hist[0][ids + 3] > hist[0][ids + 1]
-        if ids > 0:
-            id_E_flag[i] *= hist[0][ids - 1] > hist[0][ids + 1]
-
-    id_E = id_E[id_E_flag]
+    # exclude minima where one of the one of the components would have to few particles
+    for id, energy in energies.items():
+        flag = (len(arr[arr > energy]) < MinPart) or (len(arr[arr < energy]) < MinPart)
+        if flag:
+            energies.pop(id)
 
     if debug:
-        print("Survived Energies:", hist[1][id_E + 1])
+        print("Survived Energies:", list(energies.values()))
         from matplotlib import pyplot as plt
 
-        plt.bar(hist[1][:-1], hist[0], hist[1][1:] - hist[1][:-1], align="edge")
+        plt.hist(arr, bins=bins, color="grey")
+        plt.plot(
+            (bins[1:] + bins[:-1]) / 2,
+            smoothed_hist,
+            color="red",
+        )
+        plt.scatter(
+            energies.values(),
+            smoothed_hist[list(energies.keys())],
+            color="black",
+            s=50,
+            zorder=10,
+        )
         plt.ylabel("Count")
-        plt.xlabel("E/|Emax|")
+        plt.xlabel("E")
         plt.show()
 
     # Return the central position of the bins
-    return 0.5 * (hist[1][id_E + 2] + hist[1][id_E + 1]), hist[0][id_E + 1]
+    return np.array([*energies.values()]), hist[0][list(energies.keys())]
 
 
 ########################################################################################
@@ -127,10 +136,12 @@ def morph(
     j_circ_from_r: Any = False,
     LogInterp: Any = False,
     BoundOnly: Any = False,
+    refine: Any = False,
     Ecut: Any = None,
     jThinMin: Any = 0.7,
     mode: Any = "tree",
     theta: Any = 0.5,
+    sigma: Any = 2,
     dimcell: Any = "1 kpc",
     DumpProb: Any = False,
 ) -> Any:
@@ -155,6 +166,7 @@ def morph(
     rather than as a function of orbital energy
     LogInterp -- use a logarithmic interpolation/extrapolation, instead of a linear one,
     to evaluate the circular angular momentum
+    refine -- If True, try to refine energy minimum found. The default is False.
     BoundOnly -- enable it to exclude those particles with E>=0, |jz/jcirc|>=1.5>=1.5,
     |jp/jcirc|>=1.5; see Zana et al. 2022
     mode -- choose amongst 'direct', 'pm', 'tree', 'cosmo_sim', 'iso_sim', or
@@ -171,6 +183,8 @@ def morph(
     that a particle must have to be part of the 'thin disc' component. Default is 0.7
     theta -- opening angle of the tree to tune force computation accuracy when mode
     is 'tree'. Default is 0.5
+    sigma -- Standard devation used for smoothing the energy histogram when searching
+    for minina. Default is 2
     dimcell -- cubic cell side. When mode is 'pm'. Default is dimcell=1 kpc
 
     Returns:
@@ -382,8 +396,11 @@ def morph(
         M_E: float = np.quantile(te, 0.9)
         m_E: float = np.min(te)
 
-        bins = np.histogram_bin_edges(te, bins="fd", range=(m_E, M_E))
-        Ecut, E_val = FindMin(te, m_E, M_E, bins)
+        # find energy minima, but only for particles that are not in thin disk
+        bins = np.histogram_bin_edges(
+            te[JzJcirc < jThinMin], bins="fd", range=(m_E, M_E)
+        )
+        Ecut, E_val = FindMin(te[JzJcirc < jThinMin], m_E, M_E, bins, sigma=sigma)
         # If no minimum is found or the only minimum is too close to -1 (Maybe a GC?)
         if len(Ecut) == 0 or (len(Ecut) == 1 and Ecut < Emin):
             if debug:
@@ -391,7 +408,7 @@ def morph(
 
             M_E = np.max(te)
             bins = np.histogram_bin_edges(te, bins="fd", range=(m_E, M_E))
-            Ecut, E_val = FindMin(te, m_E, M_E, bins)
+            Ecut, E_val = FindMin(te[JzJcirc < jThinMin], m_E, M_E, bins, sigma=sigma)
             Ecut = Ecut
 
         nbins = len(bins) - 1
@@ -410,36 +427,42 @@ def morph(
         if debug:
             print("Energy before loop:", Ecut)
 
-        while nbins < NbinMax:
-            nbins = shrink * nbins
-            D = D / shrink
-            bins = np.histogram_bin_edges(te, bins=nbins, range=(m_E, M_E))
-            pos_E_refined, val_refined = FindMin(te, m_E, M_E, bins)
-            EcutTEMP = []
-            E_valTEMP = []
-            for i, v in enumerate(E_val):
-                pTEMP = pos_E_refined[
-                    (pos_E_refined <= rb[i]) * (pos_E_refined >= lb[i])
-                ]
-                vTEMP = val_refined[(pos_E_refined <= rb[i]) * (pos_E_refined >= lb[i])]
-                if len(pTEMP) > 0:
-                    # A rifened position and value for each original minimum is stored.
-                    # The value of the minima is summed to the original ones to avoid
-                    # strange local minima
-                    EcutTEMP.append(pTEMP[np.argmin(vTEMP)])
-                    E_valTEMP.append(v + np.min(vTEMP))
+        if refine:
+            while nbins < NbinMax:
+                nbins = shrink * nbins
+                D = D / shrink
+                bins = np.histogram_bin_edges(te, bins=nbins, range=(m_E, M_E))
+                pos_E_refined, val_refined = FindMin(
+                    te[JzJcirc < jThinMin], m_E, M_E, bins, sigma=sigma
+                )
+                EcutTEMP = []
+                E_valTEMP = []
+                for i, v in enumerate(E_val):
+                    pTEMP = pos_E_refined[
+                        (pos_E_refined <= rb[i]) * (pos_E_refined >= lb[i])
+                    ]
+                    vTEMP = val_refined[
+                        (pos_E_refined <= rb[i]) * (pos_E_refined >= lb[i])
+                    ]
+                    if len(pTEMP) > 0:
+                        # A rifened position and value for each original minimum is
+                        # stored.
+                        # The value of the minima is summed to the original ones to
+                        # avoid strange local minima
+                        EcutTEMP.append(pTEMP[np.argmin(vTEMP)])
+                        E_valTEMP.append(v + np.min(vTEMP))
 
-            Ecut = np.array(EcutTEMP)
-            E_val = np.array(E_valTEMP)
+                Ecut = np.array(EcutTEMP)
+                E_val = np.array(E_valTEMP)
 
-            if debug:
-                print("Energy in loop", Ecut)
+                if debug:
+                    print("Energy in loop", Ecut)
 
-            if len(Ecut) <= 1:
-                break
+                if len(Ecut) <= 1:
+                    break
 
-            lb = Ecut - (toll * D)
-            rb = Ecut + (toll * D)
+                lb = Ecut - (toll * D)
+                rb = Ecut + (toll * D)
 
         # -------
 

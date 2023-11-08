@@ -127,8 +127,7 @@ class Filter:
         """
         Add stars in different components of galaxy (thin disk, thick disk, bulge,
         halo). The decomposition is performed by the mordor code (Zana2022).
-        For our purposes we classify both thick disk and pseudo-bulge stars as
-        thick disk.
+        For our purposes pseudo-bulge stars are classified as bulge stars.
         Also adds field 'galaxy_stars' with all star particles.
 
         Parameters
@@ -213,7 +212,15 @@ def _create_component_mask(
     """
     Creates mask on star_particle_IDs categorising if they belong to a given
     galaxy component.
-    By default, pseudo-bulge and thick disk are both classified as thick disk.
+    By default, pseudo-bulge stars are classified as bulge stars.
+
+    The mordor classification is
+        0 - unbound/excluded
+        1 - thin/cold disc
+        2 - thick/warm disc
+        3 - pseudo-bulge
+        4 - bulge
+        5 - stellar halo
 
     Parameters
     ----------
@@ -234,14 +241,13 @@ def _create_component_mask(
         The mask filtering out the galaxy components.
 
     """
-    # default component mapping, puts thick disk and pseudo-bulge into bulge
-    # category
+    # default component mapping, puts pseudo-bulge into bulge category
     if component_dict is None:
         component_dict = {
             "unbound": [0],
             "thin_disk": [1],
-            "thick_disk": [2, 3],
-            "bulge": [4],
+            "thick_disk": [2],
+            "bulge": [3, 4],
             "halo": [5],
             "all": [0, 1, 2, 3, 4, 5],
         }
