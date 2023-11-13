@@ -5,7 +5,9 @@ Created on Tue Jun  6 13:55:06 2023
 
 @author: chris
 """
+# flake8: noqa
 
+# %%
 import os
 import pathlib
 import sys
@@ -29,3 +31,5 @@ model = Model(
     ngpps_num_embryos=num_embryos,
     ngpps_star_masses=host_star_mass,
 )
+
+# %%

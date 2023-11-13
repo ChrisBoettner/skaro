@@ -308,7 +308,7 @@ class Systems:
             {"min": self.variables.min(), "max": self.variables.max()}
         )
         bounds_dict = {
-            index: (row["min"], row["max"]) for index, row in bounds.iterrows()
+            str(index): (row["min"], row["max"]) for index, row in bounds.iterrows()
         }
         return bounds_dict
 
@@ -368,7 +368,7 @@ class Systems:
 
         if as_dataframe:
             # turn coordinate pairs into dataframe
-            meshgrid = pd.DataFrame(meshgrid, columns=bounds.keys())
+            meshgrid = pd.DataFrame(meshgrid, columns=list(bounds.keys()))
         return meshgrid
 
     def sample_distribution(
@@ -711,7 +711,7 @@ class PlanetModel:
         if return_full:
             return dataframe
         else:
-            dataframe["log_solid_mass"]
+            return dataframe["log_solid_mass"].to_frame()
 
     @methodtools.lru_cache(maxsize=512)
     def get_planet_function(

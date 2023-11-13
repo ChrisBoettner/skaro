@@ -254,6 +254,9 @@ def contourplot(
         Number of bins of underlying grid, needed to reconstruct meshgrid.
     bin_window : int, optional
         Choose how many bins are combined into single bar of top barplot.
+    additional_contours : Optional[str], optional
+        Optional name of seperate column to make additional contours. The default
+        is None
     cmap : Optional[ListedColormap], optional
         The colormap to be used. The default is None.
     colorbar_label : Optional[str], optional
@@ -284,6 +287,10 @@ def contourplot(
         [contour_ax, cbar_ax, histogram_ax].
 
     """
+    kws = {} if kws is None else kws
+    okws = {} if okws is None else okws
+    ackws = {} if ackws is None else ackws
+
     # reshape dataframe to meshgrids for plotting
     xx, yy, zz = [
         data[key].to_numpy().reshape(2 * [reshaping_bins]) for key in (x, y, hue)
@@ -330,7 +337,7 @@ def contourplot(
     cbar_ax = fig.add_subplot(gs[1, 1])
     cbar = fig.colorbar(contour, cax=cbar_ax)
     cbar.set_label(hue if colorbar_label is None else colorbar_label)
-    cbar.outline.set_visible(False)
+    cbar.outline.set_visible(False)  # type: ignore
 
     # add top histogram by summing over y axis
     histogram_ax = fig.add_subplot(gs[0, 0], sharex=contour_ax)
@@ -349,8 +356,8 @@ def contourplot(
     if additional_contours is not None:
         ww = data[additional_contours].to_numpy().reshape(2 * [reshaping_bins])
 
-        additional_contours = contour_ax.contour(xx, yy, ww, **ackws)
-        contour_ax.clabel(additional_contours, inline=True, fmt=contour_label_fmt)
+        add_contours = contour_ax.contour(xx, yy, ww, **ackws)
+        contour_ax.clabel(add_contours, inline=True, fmt=contour_label_fmt)
 
     # adapt layout
     fig.tight_layout()

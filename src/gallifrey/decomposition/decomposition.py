@@ -62,7 +62,7 @@ def FindMin(q: Any, m_E: Any, M_E: Any, bins: Any, sigma: Any) -> Any:
             color="red",
         )
         plt.scatter(
-            energies.values(),
+            list(energies.values()),
             smoothed_hist[list(energies.keys())],
             color="black",
             s=50,

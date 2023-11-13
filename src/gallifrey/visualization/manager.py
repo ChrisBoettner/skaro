@@ -53,6 +53,7 @@ class FigureManager:
         plots = list(getattr(ytPlot, "plots").values())
         for plot in plots:
             # create new figure manager
+            assert plt._backend_mod is not None
             new_manager = plt._backend_mod.new_figure_manager_given_figure(
                 num=self.num, figure=plot.figure
             )
@@ -62,7 +63,7 @@ class FigureManager:
             pl.figure(plot.figure)
             plt.show()
             # append manager to list of managers
-            self.managers.append(new_manager)
+            self.managers.append(new_manager)  # type: ignore # (mypy ignore)
             # increment counter
             self.num += 1
 

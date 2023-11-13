@@ -549,7 +549,7 @@ class Halo(HaloContainer):
                 test_flag=self.test_flag,
             )
             if save:
-                particle_id_dataframe.to_csv(path, index=None)
+                particle_id_dataframe.to_csv(path, index=False)
 
         return particle_id_dataframe
 

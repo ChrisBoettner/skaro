@@ -293,7 +293,7 @@ def galaxy_components(
         # if forced, recalculate assignment, independent if file could be loaded
         assignment = calculate_galaxy_decomposition(snapshot_path, halo, **kwargs)
         if save:
-            assignment.to_csv(path, index=None)
+            assignment.to_csv(path, index=False)
 
     else:
         try:
