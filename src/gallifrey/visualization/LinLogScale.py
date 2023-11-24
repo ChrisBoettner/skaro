@@ -76,7 +76,7 @@ class LinLogTransform(Transform):
         self._linscale_adj: float = linscale / (1.0 - self.base**-1)
         self._log_base: float = np.log(base)
 
-    def transform_non_affine(self, values: np.ndarray) -> np.ndarray:
+    def transform_non_affine(self, values: np.ndarray) -> np.ndarray:  # type: ignore
         """
         Perform the custom log transformation on values.
 
@@ -173,12 +173,12 @@ class InvertedLinLogTransform(Transform):
         linlog = LinLogTransform(base, linthresh, linscale, clip_value)
         self.base: float = base
         self.linthresh: float = linthresh
-        self.invlinthresh: float = linlog.transform(linthresh)
+        self.invlinthresh: float = linlog.transform(linthresh)  # type: ignore
         self.linscale: float = linscale
         self.clip_value: float | str = clip_value
         self._linscale_adj: float = linscale / (1.0 - self.base**-1)
 
-    def transform_non_affine(self, values: np.ndarray) -> np.ndarray:
+    def transform_non_affine(self, values: np.ndarray) -> np.ndarray:  # type: ignore
         """
         Perform the inverted custom log transformation on values.
 
@@ -334,9 +334,9 @@ class CombinedLogLinearLocator(Locator):
         self.numbins: Optional[int | str] = numbins
         # Separate locators for log and linear regions
         self.log_locator = LogLocator(base=base, subs=subs, numticks=numticks_log)
-        self.maxnlocator = MaxNLocator(numbins, symmetric=True)
+        self.maxnlocator = MaxNLocator(numbins, symmetric=True)  # type: ignore
 
-    def tick_values(self, vmin: float, vmax: float) -> np.ndarray:
+    def tick_values(self, vmin: float, vmax: float) -> np.ndarray:  # type: ignore
         """
         Calculate tick values given the range of the data.
 
@@ -361,15 +361,15 @@ class CombinedLogLinearLocator(Locator):
 
         # Get ticks for log and linear regions
         log_ticks = self.log_locator.tick_values(log_vmin, log_vmax)
-        log_ticks = log_ticks[log_ticks <= self.linthresh]
+        log_ticks = log_ticks[log_ticks <= self.linthresh]  # type: ignore
 
         linear_ticks = self.maxnlocator.tick_values(linear_vmin, linear_vmax)
-        linear_ticks = linear_ticks[linear_ticks > linear_vmin]
+        linear_ticks = linear_ticks[linear_ticks > linear_vmin]  # type: ignore
 
         # Combine and return the ticks
         return np.concatenate([log_ticks, linear_ticks])
 
-    def __call__(self) -> np.ndarray:
+    def __call__(self) -> np.ndarray:  # type: ignore
         """
         Return tick values for the current axis view interval.
 
@@ -378,7 +378,7 @@ class CombinedLogLinearLocator(Locator):
         np.ndarray
             Array of tick values.
         """
-        vmin, vmax = self.axis.get_view_interval()
+        vmin, vmax = self.axis.get_view_interval()  # type: ignore
         return self.tick_values(vmin, vmax)
 
 
@@ -407,7 +407,7 @@ class CustomLogLocator(LogLocator):
         super().__init__(*args, **kwargs)
         self.linthresh = linthresh
 
-    def tick_values(self, vmin: float, vmax: float) -> np.ndarray:
+    def tick_values(self, vmin: float, vmax: float) -> np.ndarray:  # type: ignore
         """
         Calculate tick values given the range of the data, cut off at threshold.
 
@@ -426,7 +426,7 @@ class CustomLogLocator(LogLocator):
         tick_values = super().tick_values(vmin, vmax)
         return np.array([val for val in tick_values if val <= self.linthresh])
 
-    def __call__(self) -> np.ndarray:
+    def __call__(self) -> np.ndarray:  # type: ignore
         """
         Return tick values for the current axis view interval.
 
@@ -435,7 +435,7 @@ class CustomLogLocator(LogLocator):
         np.ndarray
             Array of tick values.
         """
-        vmin, vmax = self.axis.get_view_interval()
+        vmin, vmax = self.axis.get_view_interval()  # type: ignore
         return self.tick_values(vmin, vmax)
 
 
@@ -454,7 +454,7 @@ class LinLogScale(LogScale):
 
     def __init__(
         self,
-        axis: Axes,
+        axis: Optional[Axes],
         base: float = 10,
         linthresh: float = 1,
         linscale: float = 1,
@@ -466,7 +466,7 @@ class LinLogScale(LogScale):
 
         Parameters
         ----------
-        axis : Axis
+        axis : Optional[Axis]
             The axis object to which this scale is attached.
         base : float, optional
             Base of the logarithm. The default is 10.
@@ -481,7 +481,7 @@ class LinLogScale(LogScale):
         subs : Optional[tuple], optional
             The sequence of the location of the minor ticks.
         """
-        super().__init__(axis)
+        super().__init__(axis)  # type: ignore
         self._transform = LinLogTransform(base, linthresh, linscale, clip_value)
         self.subs = subs
 
@@ -500,7 +500,10 @@ class LinLogScale(LogScale):
         """Factor by which data within linthresh is linearly scaled."""
         return self._transform.linscale
 
-    def set_default_locators_and_formatters(self, axis: Axes) -> None:
+    def set_default_locators_and_formatters(
+        self,
+        axis: Axes,  # type: ignore
+    ) -> None:
         """
         Set the default locators and formatters for this scale.
 
@@ -512,6 +515,11 @@ class LinLogScale(LogScale):
         formatter = LinLogFormatter(self.linthresh)
 
         # Set major and minor locators and formatters
+        assert hasattr(axis, "set_major_locator")
+        assert hasattr(axis, "set_minor_locator")
+        assert hasattr(axis, "set_major_formatter")
+        assert hasattr(axis, "set_minor_formatter")
+
         axis.set_major_locator(
             CombinedLogLinearLocator(base=self.base, linthresh=self.linthresh)
         )

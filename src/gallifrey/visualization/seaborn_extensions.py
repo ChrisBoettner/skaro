@@ -28,7 +28,7 @@ class _LogYRegression(_RegressionPlotter):
 
     def fit_regression(
         self,
-        ax: plt.Axes = None,
+        ax: Optional[plt.Axes] = None,
         x_range: Optional[tuple[float, float]] = None,
         grid: Optional[np.ndarray] = None,
     ) -> tuple[Iterable, np.ndarray, np.ndarray | None]:
