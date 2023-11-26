@@ -12,6 +12,8 @@ import os
 import pathlib
 import sys
 
+sys.path.append(str(pathlib.Path(os.getcwd()).joinpath("src")))
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd

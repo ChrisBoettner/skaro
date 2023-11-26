@@ -362,6 +362,7 @@ class Model:
                     hard_bounds=self.ngpps_hard_bounds,
                     **self.planet_params,
                 )
+            self.fields.add_total_planet_number(planet_model.categories)
         return planet_model
 
     def update_fields(self, **config: Any) -> None:

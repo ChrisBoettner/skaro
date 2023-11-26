@@ -18,6 +18,7 @@ from yt.fields.derived_field import DerivedField
 from yt.fields.field_detector import FieldDetector
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
+from yt.utilities.exceptions import YTFieldNotFound
 
 from gallifrey.planets import PlanetModel
 from gallifrey.stars import ChabrierIMF, StellarModel
@@ -250,6 +251,46 @@ class Fields:
         self.ds.add_field(
             ("stars", category),
             function=_planets,
+            sampling_type="local",
+            units="auto",
+            dimensions=1,
+            force_override=True,
+        )
+
+    def add_total_planet_number(
+        self,
+        categories: list[str],
+    ) -> None:
+        """
+        Add total number of planets as a sum of all planet types.
+
+        Parameters
+        ----------
+        categories : list[str]
+            The categories of planets to consider, e.g. []"Earth", "Giant"]. Find
+            list of available categories in planet_model.population class.
+
+        """
+        # check if star properties are correctly set
+        self.check_star_properties()
+
+        # add (total) planets field
+        def _total_planets(field: DerivedField, data: FieldDetector) -> NDArray:
+            try:
+                total_planets = np.sum(
+                    np.array([data["stars", category] for category in categories]),
+                    axis=0,
+                )
+            except YTFieldNotFound:
+                raise AttributeError(
+                    "Planet fields not found for creation of total "
+                    "'planet' field. Create first using 'add_planets' method."
+                )
+            return total_planets
+
+        self.ds.add_field(
+            ("stars", "planets"),
+            function=_total_planets,
             sampling_type="local",
             units="auto",
             dimensions=1,
