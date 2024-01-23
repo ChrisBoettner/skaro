@@ -135,7 +135,7 @@ class Filter:
         compotent_dataframe : pd.DataFrame
             Dataframe with galaxy components, must contain columns 'Component' and
             'ParticleIDs'. Usually created using
-            gallifrey.decomposition.mordor.galaxy_components
+            skaro.decomposition.mordor.galaxy_components
         **kwargs: Any
             Further arguments passed to create_component_mask.
 
@@ -226,7 +226,7 @@ def _create_component_mask(
     ----------
     compotent_dataframe : pd.DataFrame
         Dataframe with components, must contain columns 'Component' and 'ParticleIDs'.
-        Usually created using gallifrey.decomposition.mordor.galaxy_components
+        Usually created using skaro.decomposition.mordor.galaxy_components
     star_particle_IDs : np.ndarray
         List of all star particles IDs in yt selection.
     component : str

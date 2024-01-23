@@ -15,9 +15,9 @@ from scipy.stats import rv_continuous, truncnorm
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
 
-from gallifrey.data.paths import Path
-from gallifrey.utilities.dataframe import within_bounds
-from gallifrey.utilities.structures import find_closest, make_meshgrid
+from skaro.data.paths import Path
+from skaro.utilities.dataframe import within_bounds
+from skaro.utilities.structures import find_closest, make_meshgrid
 
 
 class Population:

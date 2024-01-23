@@ -7,8 +7,8 @@ from pynbody.analysis import profile
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks
 
-from gallifrey.decomposition import gravity
-from gallifrey.decomposition.kdtree import ConstructKDTree
+from skaro.decomposition import gravity
+from skaro.decomposition.kdtree import ConstructKDTree
 
 # Print some useful information
 debug = False

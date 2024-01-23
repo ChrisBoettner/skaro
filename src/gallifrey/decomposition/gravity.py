@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 from pynbody import array, units
 
-from gallifrey.decomposition import kdtree
+from skaro.decomposition import kdtree
 
 # Print some useful information
 debug = False

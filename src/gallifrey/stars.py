@@ -15,7 +15,7 @@ from scipy.integrate import quad
 from scipy.special import erf
 from scipy.stats import rv_continuous
 
-from gallifrey.data.paths import Path
+from skaro.data.paths import Path
 
 
 class StellarModel:

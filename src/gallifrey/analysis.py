@@ -11,9 +11,9 @@ import numpy as np
 import pandas as pd
 import yt
 
-from gallifrey.model import Model
-from gallifrey.utilities.dataframe import aggregated_dataframe, rename_entries
-from gallifrey.utilities.logging import logger
+from skaro.model import Model
+from skaro.utilities.dataframe import aggregated_dataframe, rename_entries
+from skaro.utilities.logging import logger
 
 # create Logger
 logger = logger(__name__)
@@ -67,7 +67,7 @@ def count_planets(
         Name of the value field, if the dataframe is returned in long format. The
         default is "Number of Planets".
     rename_components: bool, optional
-        If True, rename components using gallifrey.utilities.dataframe.rename_entries.
+        If True, rename components using skaro.utilities.dataframe.rename_entries.
     description: Optional[tuple[str, Any]], optional
         Adds an optional description of the dataframe by appending columns with a
         decriptor value. Must be of form {column name, entry value}. The default is

@@ -21,11 +21,11 @@ from yt.data_objects.selection_objects.spheroids import YTSphere
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
-from gallifrey.data.load import load_AHF_particles
-from gallifrey.data.paths import Path
-from gallifrey.filter import Filter
-from gallifrey.utilities.math import calculate_pca
-from gallifrey.utilities.structures import count_list_occurences
+from skaro.data.load import load_AHF_particles
+from skaro.data.paths import Path
+from skaro.filter import Filter
+from skaro.utilities.math import calculate_pca
+from skaro.utilities.structures import count_list_occurences
 
 
 class HaloContainer:

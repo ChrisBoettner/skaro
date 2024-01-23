@@ -20,7 +20,7 @@ import pandas as pd
 import seaborn as sns
 import yt
 
-from gallifrey.model import Model
+from skaro.model import Model
 
 resolution = 8192
 sim_id = "37_11"

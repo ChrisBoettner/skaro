@@ -7,7 +7,7 @@ Created on Tue May 30 19:06:53 2023
 """
 import requests
 
-from gallifrey.data.paths import Path
+from skaro.data.paths import Path
 
 
 def query_exoplanet_data(query: str, file_name: str) -> None:

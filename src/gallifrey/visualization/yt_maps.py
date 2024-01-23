@@ -16,8 +16,8 @@ from matplotlib.pyplot import Axes, Figure
 from yt import ParticleProjectionPlot
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
-from gallifrey.data.paths import Path
-from gallifrey.visualization.visualization_utils import get_palette
+from skaro.data.paths import Path
+from skaro.visualization.visualization_utils import get_palette
 
 
 def plot_component_maps(
@@ -62,7 +62,7 @@ def plot_component_maps(
         Depth of the projected, centered on domain center. The default is (1, "kpc").
     cmap : str, optional
         Colormap to use. The default is "None", which loads the color palette defined
-        in gallifrey.visualization.seaborn.
+        in skaro.visualization.seaborn.
     figsize : tuple[float,float], optional
         Size of figure. The default is (12.6, 12.6).
     deposition_method : str, optional
@@ -217,7 +217,7 @@ def plot_planet_maps(
         Depth of the projected, centered on domain center. The default is (43.3, "kpc").
     cmap : str, optional
         Colormap to use. The default is "None", which loads the color palette defined
-        in gallifrey.visualization.seaborn.
+        in skaro.visualization.seaborn.
     figsize : tuple[float,float], optional
         Size of figure. The default is (18.5, 10.5).
     deposition_method : str, optional

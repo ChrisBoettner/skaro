@@ -1,4 +1,4 @@
-name: gallifrey
+name: skaro
 channels:
   - conda-forge
 dependencies:
@@ -320,4 +320,4 @@ dependencies:
       - dace-query==1.1.0
       - posix-ipc==1.1.1
       - pynbody==1.4.2
-prefix: /home/chris/mambaforge/envs/gallifrey
+prefix: /home/chris/mambaforge/envs/skaro

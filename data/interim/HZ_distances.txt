@@ -1,4 +1,4 @@
-# calculated using HZ function in gallifrey.stars.StellarModel 
+# calculated using HZ function in skaro.stars.StellarModel 
 # Mass (in solar masses) Inner HZ distance (in AU) Outer HZ distance (in AU)
 8.000000000000000167e-02 2.091635934873264241e-02 4.225405090736723129e-02
 8.002433787049650915e-02 2.092596041884905306e-02 4.227307383528974838e-02

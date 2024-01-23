@@ -8,10 +8,10 @@ from pynbody.snapshot import IndexedSubSnap
 from pynbody.snapshot.gadgethdf import GadgetHDFSnap
 from unyt import unyt_array, unyt_quantity
 
-from gallifrey.data.paths import Path
-from gallifrey.decomposition import decomposition
-from gallifrey.halo import Halo
-from gallifrey.utilities.logging import logger
+from skaro.data.paths import Path
+from skaro.decomposition import decomposition
+from skaro.halo import Halo
+from skaro.utilities.logging import logger
 
 # create Logger
 logger = logger(__name__)

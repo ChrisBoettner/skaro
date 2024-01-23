@@ -10,8 +10,8 @@ import os
 import yt
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 
-from gallifrey.data.paths import Path
-from gallifrey.utilities.logging import logger
+from skaro.data.paths import Path
+from skaro.utilities.logging import logger
 
 # create Logger
 logger = logger(__name__)

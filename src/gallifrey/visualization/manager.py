@@ -13,7 +13,7 @@ import pylab as pl
 from matplotlib.backends.backend_qt import FigureManagerQT
 from yt.visualization.plot_window import NormalPlot
 
-from gallifrey.utilities.logging import logger
+from skaro.utilities.logging import logger
 
 # create Logger
 logger = logger(__name__)

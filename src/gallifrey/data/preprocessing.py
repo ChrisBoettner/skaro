@@ -13,8 +13,8 @@ from typing import Any, Optional
 
 from ruamel.yaml import YAML, CommentedMap
 
-from gallifrey.data.paths import Path
-from gallifrey.utilities.logging import logger
+from skaro.data.paths import Path
+from skaro.utilities.logging import logger
 
 # create Logger
 logger = logger(__name__)

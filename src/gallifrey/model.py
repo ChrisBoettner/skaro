@@ -12,15 +12,15 @@ import numpy as np
 import pandas as pd
 from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 
-from gallifrey.data.load import load_snapshot
-from gallifrey.decomposition.mordor import galaxy_components
-from gallifrey.fields import Fields
-from gallifrey.filter import Filter
-from gallifrey.halo import MainHalo
-from gallifrey.planets import PlanetModel
-from gallifrey.stars import ChabrierIMF, StellarModel
-from gallifrey.utilities.logging import logger
-from gallifrey.utilities.time import Timer
+from skaro.data.load import load_snapshot
+from skaro.decomposition.mordor import galaxy_components
+from skaro.fields import Fields
+from skaro.filter import Filter
+from skaro.halo import MainHalo
+from skaro.planets import PlanetModel
+from skaro.stars import ChabrierIMF, StellarModel
+from skaro.utilities.logging import logger
+from skaro.utilities.time import Timer
 
 # create Logger
 logger = logger(__name__)
@@ -80,7 +80,7 @@ class Model:
             considerations, where star particles with metallicities below the miminimum
             value of the NGPPS sample ([Fe/H] = -0.6) are assigned zero planets. The
             default is "none". For more details, see
-            gallifrey.utilities.dataframe.within_bounds.
+            skaro.utilities.dataframe.within_bounds.
         planet_hosting_imf_delta : float, optional
             If ngpps_star_masses is a single number, the IMF is integrated in the range
             ((1-imf_delta_mass)*ngpps_star_mass, (1+imf_delta)*ngpps_star_masses). No

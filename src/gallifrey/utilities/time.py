@@ -12,7 +12,7 @@ from builtins import BaseException
 from types import TracebackType
 from typing import Any, Callable, Optional, Type
 
-from gallifrey.utilities.logging import logger
+from skaro.utilities.logging import logger
 
 # create logger
 logger = logger(__name__)

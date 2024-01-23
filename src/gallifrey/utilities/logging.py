@@ -13,4 +13,4 @@ logging.basicConfig(level=logging.INFO, format="\n      %(message)s\n")
 logger = logging.getLogger
 
 # create default logger, parent to all other logger in module
-defaultlogger = logging.getLogger("gallifrey")
+defaultlogger = logging.getLogger("skaro")

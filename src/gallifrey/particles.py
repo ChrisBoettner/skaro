@@ -18,7 +18,7 @@ from yt.fields.field_detector import FieldDetector
 from yt.frontends.stream.data_structures import StreamParticlesDataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
-from gallifrey.utilities.math import calculate_rotation_matrix
+from skaro.utilities.math import calculate_rotation_matrix
 
 
 def rotated_dataset(

@@ -9,7 +9,7 @@ Created on Thu Feb 16 15:35:33 2023
 import functools
 from typing import Any, Callable
 
-from gallifrey.utilities.logging import logger
+from skaro.utilities.logging import logger
 
 logger = logger()
 

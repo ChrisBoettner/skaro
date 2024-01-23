@@ -11,7 +11,7 @@ import pandas as pd
 from yt.data_objects.data_containers import YTDataContainer
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 
-from gallifrey.utilities.structures import flatten_list
+from skaro.utilities.structures import flatten_list
 
 
 def aggregated_dataframe(

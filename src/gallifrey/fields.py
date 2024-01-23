@@ -20,10 +20,10 @@ from yt.frontends.arepo.data_structures import ArepoHDF5Dataset
 from yt.frontends.ytdata.data_structures import YTDataContainerDataset
 from yt.utilities.exceptions import YTFieldNotFound
 
-from gallifrey.planets import PlanetModel
-from gallifrey.stars import ChabrierIMF, StellarModel
-from gallifrey.utilities.logging import logger
-from gallifrey.utilities.structures import find_closest
+from skaro.planets import PlanetModel
+from skaro.stars import ChabrierIMF, StellarModel
+from skaro.utilities.logging import logger
+from skaro.utilities.structures import find_closest
 
 # create Logger
 logger = logger(__name__)
@@ -148,7 +148,7 @@ class Fields:
             considerations, where star particles with metallicities below the miminimum
             value of the NGPPS sample ([Fe/H] = -0.6) are assigned zero planets. The
             default is "none". For more details, see
-            gallifrey.utilities.dataframe.within_bounds.
+            skaro.utilities.dataframe.within_bounds.
         """
         # check if star properties are correctly set
         self.check_star_properties()

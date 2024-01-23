@@ -13,7 +13,7 @@ class Path:
     @staticmethod
     def raw_data(
         relative_path: str,
-        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/raw",
+        local_abspath: str = r"/home/chris/Documents/Projects/skaro/data/raw",
         remote_abspath: str = r"/store/clues/HESTIA/RE_SIMS",
     ) -> pathlib.Path:
         """
@@ -25,7 +25,7 @@ class Path:
             Relative file path.
         local_abspath : str, optional
             Local absolute path.
-            The default is r"/home/chris/Documents/Projects/gallifrey/data/raw".
+            The default is r"/home/chris/Documents/Projects/skaro/data/raw".
         remote_abspath : str, optional
             Remote ansolute path.
             The default is r"/store/clues/HESTIA/RE_SIMS".
@@ -42,8 +42,8 @@ class Path:
     @staticmethod
     def processed_data(
         relative_path: str,
-        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/processed",
-        remote_abspath: str = r"/z/boettner/gallifrey/data/processed",
+        local_abspath: str = r"/home/chris/Documents/Projects/skaro/data/processed",
+        remote_abspath: str = r"/z/boettner/skaro/data/processed",
     ) -> pathlib.Path:
         """
         Path to processed data.
@@ -54,10 +54,10 @@ class Path:
             Relative file path.
         local_abspath : str, optional
             Local absolute path.
-            The default is r"/home/chris/Documents/Projects/gallifrey/data/processed".
+            The default is r"/home/chris/Documents/Projects/skaro/data/processed".
         remote_abspath : str, optional
             Remote ansolute path.
-            The default is r"/z/boettner/gallifrey/data/processed".
+            The default is r"/z/boettner/skaro/data/processed".
 
         Returns
         -------
@@ -71,8 +71,8 @@ class Path:
     @staticmethod
     def external_data(
         relative_path: str,
-        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/external",
-        remote_abspath: str = r"/z/boettner/gallifrey/data/external",
+        local_abspath: str = r"/home/chris/Documents/Projects/skaro/data/external",
+        remote_abspath: str = r"/z/boettner/skaro/data/external",
     ) -> pathlib.Path:
         """
         Path to external data.
@@ -83,10 +83,10 @@ class Path:
             Relative file path.
         local_abspath : str, optional
             Local absolute path.
-            The default is r"/home/chris/Documents/Projects/gallifrey/data/external".
+            The default is r"/home/chris/Documents/Projects/skaro/data/external".
         remote_abspath : str, optional
             Remote ansolute path.
-            The default is r"/z/boettner/gallifrey/data/external".
+            The default is r"/z/boettner/skaro/data/external".
 
         Returns
         -------
@@ -100,8 +100,8 @@ class Path:
     @staticmethod
     def interim_data(
         relative_path: str,
-        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/data/interim",
-        remote_abspath: str = r"/z/boettner/gallifrey/data/interim",
+        local_abspath: str = r"/home/chris/Documents/Projects/skaro/data/interim",
+        remote_abspath: str = r"/z/boettner/skaro/data/interim",
     ) -> pathlib.Path:
         """
         Path to interim data.
@@ -112,10 +112,10 @@ class Path:
             Relative file path.
         local_abspath : str, optional
             Local absolute path.
-            The default is r"/home/chris/Documents/Projects/gallifrey/data/interim".
+            The default is r"/home/chris/Documents/Projects/skaro/data/interim".
         remote_abspath : str, optional
             Remote ansolute path.
-            The default is r"/z/boettner/gallifrey/data/interim".
+            The default is r"/z/boettner/skaro/data/interim".
 
         Returns
         -------
@@ -129,8 +129,8 @@ class Path:
     @staticmethod
     def figures(
         relative_path: str,
-        local_abspath: str = r"/home/chris/Documents/Projects/gallifrey/figures",
-        remote_abspath: str = r"/z/boettner/gallifrey/figures",
+        local_abspath: str = r"/home/chris/Documents/Projects/skaro/figures",
+        remote_abspath: str = r"/z/boettner/skaro/figures",
     ) -> pathlib.Path:
         """
         Path to figures.
@@ -141,10 +141,10 @@ class Path:
             Relative file path.
         local_abspath : str, optional
             Local absolute path.
-            The default is r"/home/chris/Documents/Projects/gallifrey/figures".
+            The default is r"/home/chris/Documents/Projects/skaro/figures".
         remote_abspath : str, optional
             Remote ansolute path.
-            The default is r"/z/boettner/gallifrey/figures".
+            The default is r"/z/boettner/skaro/figures".
 
         Returns
         -------

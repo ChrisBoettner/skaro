@@ -4,7 +4,7 @@
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROFILE = default
-PROJECT_NAME = gallifrey
+PROJECT_NAME = skaro
 PYTHON_INTERPRETER = python3
 
 #################################################################################
@@ -55,7 +55,7 @@ save_environment:
 update_environment:
 	mamba deactivate
 	mamba env update -f environment.yaml --prune
-	mamba activate gallifrey
+	mamba activate skaro
 
 ## create requirements.txt with pipreqs
 save_requirements:

@@ -11,7 +11,7 @@ from typing import Optional
 
 from dace_query.population import Population
 
-from gallifrey.data.paths import Path
+from skaro.data.paths import Path
 
 
 def query_DACE_populations(
