@@ -35,13 +35,14 @@ def set_plot_defaults() -> None:
         context="paper",
         style="whitegrid",
         palette="pastel",
-        font_scale=3.2,
+        font_scale=4.5,
         rc={
             "figure.figsize": (18.5, 10.5),
             "axes.grid": False,
             "font.family": "serif",
             "font.serif": ["Computer Modern Roman"],
             "text.usetex": True,
+            "text.latex.preamble": r"\usepackage[varg]{txfonts}",
         },
     )
 
