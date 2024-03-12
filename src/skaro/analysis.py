@@ -27,6 +27,7 @@ def count_planets(
     model_config: Optional[dict[str, Any]] = None,
     components: Optional[str | list[str]] = None,
     long_format: Optional[bool] = False,
+    fraction: bool = False,
     variable_name: str = "Planet Type",
     value_name: str = "Number of Planets",
     rename_components: bool = True,
@@ -60,6 +61,9 @@ def count_planets(
     long_format: bool, optional
         Choose if dataframe should be returned in long format or not. The default is
         False.
+    fraction: bool, optional
+        If True, calculate fraction of systems with planets, rather than absolute
+        number of planets. The default is False.
     variable_name: str, optional
         Name of the variable field, if the dataframe is returned in long format. The
         default is "Planet Type".
@@ -119,7 +123,13 @@ def count_planets(
         data = rename_entries(data)
 
     # count planets (per component)
-    planet_counts = data.groupby("Component")[planet_categories].sum()
+    if fraction:
+        # calculate fraction of system with planets
+        planet_counts = data.groupby("Component")[planet_categories].apply(
+            lambda x: (x != 0).sum() / x.count()
+        )
+    else:
+        planet_counts = data.groupby("Component")[planet_categories].sum()
 
     if normalize_by is not None:
         # normalise by seperate column
