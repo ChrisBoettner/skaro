@@ -1,57 +1,33 @@
-skaro
-==============================
+# Skaro: Unveiling Planet Demographics in the Milky Way
 
-Using the Hestia simulation for astrobiology.
+This project combines the HESTIA suite of high-resolution constrained hydrodynamical galaxy formation simulations with the New Generation Planet Population Synthesis (NGPPS) models from Bern to characterize exoplanet demographics across different regions of the Milky Way.  It explores how variations in stellar populations and their distribution, particularly age and metallicity, influence the prevalence of different planet types.
 
-Project Organization
-------------
+**Paper:**     [Link](https://doi.org/10.1051/0004-6361/202449557)
 
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
-    │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-    │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    │
-    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-    │                         generated with `pip freeze > requirements.txt`
-    │
-    ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
-    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
-    │
-    └── tox.ini            <- tox file with settings for running tox; see tox.readthedocs.io
+## Key Features
 
+* **Integration of HESTIA and NGPPS:** Combines a simulated Milky Way analog from the HESTIA simulations with the Bern planet formation model to generate realistic planet populations.
+* **Planet Assignment Model:** Connects the properties of host stars (mass and metallicity) with the occurrence rates of different planet types, providing a basis for populating the simulated galaxy with planets.
+* **Galactic Decomposition:** Divides the simulated galaxy into its major components (bulge, thin disk, thick disk, and halo) to analyze planet demographics in distinct stellar environments.
+* **Analysis of Planet Occurrence Rates:**  Investigates the prevalence of Earth-like planets, Super-Earths, Neptunians, and Giant planets across the galactic components and for different host star masses.
+* **Visualization Tools:**  Includes custom functions for generating informative plots, including maps of planet distributions and radial profiles of planet density.
+* **Efficient Data Handling:** Leverages `yt` for efficient processing and analysis of simulation data, `pandas` for data manipulation, and `sklearn` for machine learning tasks.
 
---------
+## Installation
 
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+1. Clone the repository: `git clone https://github.com/ChrisBoettner/skaro.git`
+2. Create a conda environment using the provided `environment.yaml`: `mamba env create -f environment.yaml`
+3. Activate the environment: `mamba activate skaro`
+4. Install the project in editable mode: `pip install -e .`
+
+## Usage
+
+The main entry point for running the code is the `Model` class in `src/skaro/model.py`.  It handles loading the simulation snapshot, creating the halo object, adding stellar and planet fields, and calculating the galaxy decomposition.  Example usage in a Jupyter notebook can be found in `playing_around.py`. The `Makefile` contains convenience commands for various tasks, including code formatting, linting, type checking, and environment management.
+
+## Data
+
+The raw HESTIA simulation snapshots are assumed to be located in the `data/raw` directory. The NGPPS data, stellar parameter data, and HZ coefficients are stored in `data/external`.  Processed data, such as halo information and galaxy decomposition results, are saved in `data/processed`. Figures generated by the code are stored in the `figures` directory. Please contact me for more information.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
